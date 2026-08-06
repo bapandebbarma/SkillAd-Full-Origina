@@ -1,0 +1,6 @@
+{
+  "name": "@supabase/realtime-js",
+  "version": "2.7.4",
+  "description": "No-op stub — replaces the real @supabase/realtime-js to remove dynamic import() that hermesc cannot compile",
+  "main": "index.js"
+}

@@ -1,0 +1,16 @@
+# SkillAd landing — Hostinger / Apache
+# SPA fallback + crawler-friendly provider share previews
+
+RewriteEngine On
+
+# Crawlers requesting /provider/:id get server-rendered OG HTML (not the SPA shell)
+RewriteCond %{HTTP_USER_AGENT} (WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Baiduspider|DuckDuckBot|Slurp) [NC]
+RewriteRule ^provider/([^/]+)/?$ provider-og.php?id=$1 [L,QSA]
+
+# Existing files (assets, PHP, etc.)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# SPA client routes (including /provider/:id for browsers)
+RewriteRule ^ index.html [L]

@@ -1,0 +1,20 @@
+{
+  "reviews": [
+    {
+      "id": "ar-1783849456986-2wes6l",
+      "rating": 5,
+      "text": "Very good app and user friendly",
+      "suggestion": "Need to improve language",
+      "displayName": "Minakshi",
+      "userId": "40986012-9d56-4854-92d0-2dddb0bd563a",
+      "userType": "Provider",
+      "city": "Agartala",
+      "appVersion": "1.0.8",
+      "platform": "web",
+      "status": "approved",
+      "featured": false,
+      "createdAt": "2026-07-12T09:44:16.981Z",
+      "updatedAt": "2026-07-12T09:45:48.350Z"
+    }
+  ]
+}

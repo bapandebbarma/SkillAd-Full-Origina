@@ -1,0 +1,33 @@
+# # SkillAd Project Rules
+
+You are working on the SkillAd production project.
+
+Project Structure:
+- admin-panel
+- api-server
+- landing-page
+- mobile-app
+- shared-libs
+
+General Rules
+
+1. Read the complete implementation before making changes.
+2. Never rewrite working code when a minimal fix is possible.
+3. Preserve all existing features unless explicitly instructed.
+4. Before editing, identify the root cause of the issue.
+5. Modify the minimum number of files required.
+6. Never change package versions unless requested.
+7. Never change database schema unless requested.
+8. Never change API contracts unless requested.
+9. Keep compatibility with Expo SDK and Supabase.
+10. Preserve the existing UI and UX unless instructed.
+11. Reuse existing components whenever possible.
+12. Follow the existing project coding style.
+13. Explain which files will be modified before making changes.
+14. After completing changes, explain how to test them.
+15. If uncertain, ask instead of guessing.
+16. Never remove features to solve a bug.
+17. Avoid unnecessary refactoring.
+18. Consider the entire workspace before making cross-project changes.
+19. Always prefer production-safe solutions.
+20. If a command may be destructive, explain it before suggesting it.

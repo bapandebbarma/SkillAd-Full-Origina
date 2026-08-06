@@ -1,0 +1,12 @@
+[
+  {
+    "id": "msg-1783849672037",
+    "name": "Bapan Debbarma",
+    "email": "bapanfc@gmail.com",
+    "phone": "09436581521",
+    "subject": "hi",
+    "message": "please update translation.json file befor deployment, and add api.skillad.in in env",
+    "createdAt": "2026-07-12T09:47:52.037Z",
+    "read": false
+  }
+]

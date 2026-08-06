@@ -1,0 +1,34 @@
+[
+  {
+    "key": "monthly",
+    "label": "Monthly",
+    "price": 19,
+    "billedAs": "Billed every month",
+    "badge": null,
+    "badgeColor": null
+  },
+  {
+    "key": "quarterly",
+    "label": "Quarterly",
+    "price": 49,
+    "billedAs": "Billed every 3 months",
+    "badge": "Save 16%",
+    "badgeColor": "#FF6B35"
+  },
+  {
+    "key": "halfYearly",
+    "label": "Half Yearly",
+    "price": 89,
+    "billedAs": "Billed every 6 months",
+    "badge": "Save 25%",
+    "badgeColor": "#10B981"
+  },
+  {
+    "key": "yearly",
+    "label": "Yearly",
+    "price": 149,
+    "billedAs": "Billed every year",
+    "badge": "Best Value",
+    "badgeColor": "#8B5CF6"
+  }
+]

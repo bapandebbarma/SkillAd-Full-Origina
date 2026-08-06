@@ -1,0 +1,101 @@
+{
+  "expo": {
+    "name": "SkillAd",
+    "slug": "skilladd-app",
+    "version": "1.0.8",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "skillad",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.skillad.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "SkillAd needs your location to show nearby service providers.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "SkillAd needs your location to show nearby service providers.",
+        "NSPhotoLibraryUsageDescription": "SkillAd needs access to your photos to set your profile picture.",
+        "NSCameraUsageDescription": "SkillAd needs your camera to take a profile photo.",
+        "NSContactsUsageDescription": "SkillAd may access contacts to help you connect with providers."
+      }
+    },
+    "android": {
+      "package": "com.skillad.app",
+      "versionCode": 8,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CALL_PHONE",
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://skillad.in"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "SkillAd needs your location to show nearby service providers.",
+          "locationWhenInUsePermission": "SkillAd needs your location to show nearby service providers.",
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "SkillAd needs access to your photos to set your profile picture.",
+          "cameraPermission": "SkillAd needs your camera to take a profile photo."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#2563EB",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "SkillAd"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "12a62e59-2beb-4271-8a4d-f40acd8af870"
+      }
+    },
+    "owner": "bapan10"
+  }
+}

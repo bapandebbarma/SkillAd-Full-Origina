@@ -1,0 +1,51 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "promptToConfigurePushNotifications": false,
+    "appVersionSource": "local"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.skillad.in/api",
+        "EXPO_PUBLIC_PROJECT_ID": "12a62e59-2beb-4271-8a4d-f40acd8af870"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.skillad.in/api",
+        "EXPO_PUBLIC_APP_ENV": "preview",
+        "EXPO_PUBLIC_PROJECT_ID": "12a62e59-2beb-4271-8a4d-f40acd8af870"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.skillad.in/api",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_PROJECT_ID": "12a62e59-2beb-4271-8a4d-f40acd8af870"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
+  }
+}

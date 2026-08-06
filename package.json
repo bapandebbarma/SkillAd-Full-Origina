@@ -1,0 +1,19 @@
+{
+  "name": "workspace",
+  "version": "0.0.0",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --if-present run typecheck",
+    "check:i18n": "node scripts/check-i18n.js"
+  },
+  "private": true,
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "picomatch": "^4.0.4",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2",
+    "vite": "7.3.5"
+  }
+}

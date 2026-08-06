@@ -1,0 +1,112 @@
+[
+  {
+    "id": "earn-1782882509684-4ovz",
+    "bookingId": "16ec1f00-c195-43e6-be6c-b85fc9042aa5",
+    "providerId": "sb-40986012-9d56-4854-92d0-2dddb0bd563a",
+    "amount": 800,
+    "service": "Class XII",
+    "customerName": "Ram",
+    "customerInitials": "R",
+    "customerAvatarColor": "#64748B",
+    "customerAvatarUrl": "",
+    "conversationId": "9edf431a-8dce-4bf0-94ae-42e8afdceff7",
+    "createdAt": "2026-07-01T05:08:29.684Z"
+  },
+  {
+    "id": "earn-1782882372551-7ofj",
+    "bookingId": "50508751-fb79-40ef-a9d8-7d125caf6b91",
+    "providerId": "sb-40986012-9d56-4854-92d0-2dddb0bd563a",
+    "amount": 400,
+    "service": "Class XII",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "customerAvatarUrl": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/profiles/1782728761808.webp",
+    "conversationId": "0017f798-509b-4269-bc67-94535e3a0a67",
+    "createdAt": "2026-07-01T05:06:12.551Z"
+  },
+  {
+    "id": "earn-1782386578591-eqi5",
+    "bookingId": "11e9e5fc-b193-4e3f-92a1-9dcfcfefca45",
+    "providerId": "2433013c-fe99-422a-ac6f-2a3f147d8ee0",
+    "amount": 1000,
+    "service": "fdfdfdfd",
+    "customerName": "Sham",
+    "customerInitials": "S",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "8f0fa381-ea3f-4982-9896-44f21b0fb188",
+    "createdAt": "2026-06-25T11:22:58.591Z"
+  },
+  {
+    "id": "earn-1782380870193-rf0w",
+    "bookingId": "45eea82f-e551-45af-a681-cab0d7cd8ecb",
+    "providerId": "2433013c-fe99-422a-ac6f-2a3f147d8ee0",
+    "amount": 900,
+    "service": "dddd",
+    "customerName": "Ram",
+    "customerInitials": "R",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "3e4c1141-08ff-4cfa-a86a-ed858324bccc",
+    "createdAt": "2026-06-25T09:47:50.193Z"
+  },
+  {
+    "id": "earn-1782378014815-53tu",
+    "bookingId": "181b762e-e0b2-4320-bed8-deb4d7d4800a",
+    "providerId": "2433013c-fe99-422a-ac6f-2a3f147d8ee0",
+    "amount": 700,
+    "service": "fsdfd",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "5b8c920a-e131-4512-bfde-525691c5fcdd",
+    "createdAt": "2026-06-25T09:00:14.815Z"
+  },
+  {
+    "id": "earn-1782112043301-r20w",
+    "bookingId": "685cb57a-20b2-4043-9529-33c56f76271f",
+    "providerId": "10e8d14a-66a8-46da-9acb-0d3d1e71d8f9",
+    "amount": 900,
+    "service": "ggg",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "7b1c456d-7f86-48b5-b600-e04d892eec49",
+    "createdAt": "2026-06-22T07:07:23.301Z"
+  },
+  {
+    "id": "earn-1781671414802-biuf",
+    "bookingId": "7f6072a1-99aa-48ba-a7f5-8c9d21f30b38",
+    "providerId": "d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "amount": 5000,
+    "service": "bus",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "a6677165-b04b-4de2-aab9-a91a1f98b6c7",
+    "createdAt": "2026-06-17T04:43:34.802Z"
+  },
+  {
+    "id": "earn-1781516943893-t282",
+    "bookingId": "cb00022c-781d-4041-82ed-f23ef253ee8d",
+    "providerId": "40986012-9d56-4854-92d0-2dddb0bd563a",
+    "amount": 900,
+    "service": "gdfdsfd",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "0017f798-509b-4269-bc67-94535e3a0a67",
+    "createdAt": "2026-06-15T09:49:03.893Z"
+  },
+  {
+    "id": "earn-1781510796719-ehdy",
+    "bookingId": "87fc4395-155c-446f-b66c-8fd13d41b413",
+    "providerId": "40986012-9d56-4854-92d0-2dddb0bd563a",
+    "amount": 800,
+    "service": "Class XII",
+    "customerName": "Bapan",
+    "customerInitials": "B",
+    "customerAvatarColor": "#64748B",
+    "conversationId": "0017f798-509b-4269-bc67-94535e3a0a67",
+    "createdAt": "2026-06-15T08:06:36.719Z"
+  }
+]

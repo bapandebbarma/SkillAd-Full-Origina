@@ -1,0 +1,16 @@
+[
+  {
+    "id": "buisu-festival-2026",
+    "title": "Buisu Festival",
+    "subtitle": "Celebrate with us — find skilled workers near you",
+    "bgColor": "#FF6B35",
+    "textColor": "#FFFFFF",
+    "imageUrl": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1778927605150.webp",
+    "linkUrl": "",
+    "targetCategory": "",
+    "startDate": "2026-05-15",
+    "endDate": "2026-05-30",
+    "active": true,
+    "createdAt": "2026-05-15T00:00:00.000Z"
+  }
+]

@@ -1,0 +1,747 @@
+import { Router, type IRouter } from "express";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+import { supabase } from "../lib/supabase.js";
+import { logger } from "../lib/logger.js";
+
+function readSettings(): any {
+  try {
+    const f = resolve(__dirname, "../data/settings.json");
+    if (existsSync(f)) return JSON.parse(readFileSync(f, "utf-8")) as any;
+  } catch { /* fall through */ }
+  return {};
+}
+
+function readSubs(): any[] {
+  try {
+    const f = resolve(__dirname, "../data/subscriptions.json");
+    if (existsSync(f)) return JSON.parse(readFileSync(f, "utf-8")) as any[];
+  } catch { /* fall through */ }
+  return [];
+}
+
+function writeSubs(subs: any[]): void {
+  const f = resolve(__dirname, "../data/subscriptions.json");
+  writeFileSync(f, JSON.stringify(subs, null, 2), "utf-8");
+}
+
+const router: IRouter = Router();
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = resolve(__dirname, "../data");
+const DATA_FILE = resolve(DATA_DIR, "providers.json");
+
+function readProviders(): any[] {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+    if (existsSync(DATA_FILE)) {
+      const raw = readFileSync(DATA_FILE, "utf-8");
+      return JSON.parse(raw) as any[];
+    }
+  } catch {
+    // fall through
+  }
+  return [];
+}
+
+function writeProviders(providers: any[]): void {
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  writeFileSync(DATA_FILE, JSON.stringify(providers, null, 2), "utf-8");
+}
+
+// Normalize phone to last 10 digits (handles +91 prefix etc.)
+function normalizePhone(raw: string): string {
+  return (raw ?? "").toString().replace(/\D/g, "").replace(/^91/, "").slice(-10);
+}
+
+// Map a Supabase row to the same shape as providers.json
+function mapSbRow(row: any): any {
+  return {
+    id: row.id,
+    userId: row.user_id ?? null,
+    name: row.name,
+    category: row.category,
+    subcategory: row.subcategory ?? null,
+    rating: row.rating ?? 0,
+    reviewCount: row.review_count ?? row.reviews?.length ?? 0,
+    distance: 0,
+    available: row.available ?? true,
+    experience: row.experience ?? 0,
+    description: row.description ?? "",
+    phone: row.phone ?? "",
+    location: row.location ?? "",
+    serviceRadius: row.service_radius ?? 50,
+    serviceCharge: row.service_charge ?? null,
+    workingHours: row.working_hours ?? "",
+    latitude: row.latitude ?? 23.8315,
+    longitude: row.longitude ?? 91.2868,
+    verified: row.verified ?? false,
+    initials: row.initials ?? "PR",
+    avatarColor: row.avatar_color ?? "#64748B",
+    avatarUrl: (Array.isArray(row.profiles) ? row.profiles[0]?.avatar_url : row.profiles?.avatar_url) ?? row.avatar_url ?? null,
+    services: row.services ?? [],
+    reviews: (row.reviews ?? []).map((r: any) => ({
+      id: r.id,
+      reviewerName: r.reviewer_name,
+      reviewerInitials: r.reviewer_initials,
+      rating: r.rating,
+      comment: r.comment,
+      date: r.created_at,
+    })),
+    registeredAt: row.created_at ?? new Date().toISOString(),
+    // Derive subscription status from the DB column so Supabase-only providers
+    // are correctly hidden when their trial/plan expires.
+    // undefined = no end date set = not subject to expiry filtering.
+    subscriptionActive: row.subscription_end_date
+      ? new Date(row.subscription_end_date) > new Date()
+      : undefined,
+    subscriptionEndDate: row.subscription_end_date ?? null,
+    _source: "supabase",
+  };
+}
+
+async function fetchSupabaseProviders(category?: string): Promise<any[]> {
+  if (!supabase) return [];
+  try {
+    // NOTE: do NOT join reviews(*) — no FK relationship exists in the schema.
+    // Reviews are loaded separately on the provider detail screen.
+    let q = supabase
+      .from("providers")
+      .select("*, profiles(avatar_url)")
+      .order("rating", { ascending: false });
+    if (category) q = q.eq("category", category);
+    const { data, error } = await q;
+    if (error || !data) {
+      // Fallback: simple select without any joins
+      const r2 = await supabase.from("providers").select("*");
+      if (r2.error || !r2.data) return [];
+      const filtered = category ? r2.data.filter((r: any) => r.category === category) : r2.data;
+      return filtered.map((r: any) => mapSbRow({ ...r, reviews: [] }));
+    }
+    return data.map(mapSbRow);
+  } catch {
+    return [];
+  }
+}
+
+// Haversine formula — returns distance in km
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// GET /api/providers?category=Electrician&lat=23.8&lng=91.2
+router.get("/providers", async (req, res) => {
+  const { category } = req.query as { category?: string };
+  const customerLat = req.query["lat"] ? parseFloat(req.query["lat"] as string) : null;
+  const customerLng = req.query["lng"] ? parseFloat(req.query["lng"] as string) : null;
+  const hasLocation = customerLat !== null && customerLng !== null && !isNaN(customerLat) && !isNaN(customerLng);
+
+  const [jsonProviders, sbProviders] = await Promise.all([
+    Promise.resolve(readProviders()),
+    fetchSupabaseProviders(category),
+  ]);
+
+  // Merge strategy:
+  // - Supabase-only providers (Ajoy, Minakshi): served directly from Supabase.
+  // - JSON-only providers (mock/seed): served from JSON unchanged.
+  // - Dual-store providers (real user who registered via app): Supabase wins for all
+  //   display fields (rating, reviewCount, location, serviceCharge, avatarColor, available,
+  //   and all profile data). JSON contributes only the structural flags that it exclusively
+  //   manages: verified, suspended, blocked, subscriptionEndDate.
+  const sbById = new Map(sbProviders.map((p: any) => [p.id, p]));
+  const jsonIds = new Set(jsonProviders.map((p: any) => p.id));
+  const sbOnly = sbProviders.filter((p: any) => !jsonIds.has(p.id));
+  const mergedJson = jsonProviders.map((p: any) => {
+    const sbRow = sbById.get(p.id);
+    if (!sbRow) return p; // JSON-only (mock/seed) — no Supabase counterpart, serve as-is
+    // Dual-store: Supabase row is the base; JSON overlays only structural admin flags
+    return {
+      ...sbRow,
+      verified: (p.verified === true) || (sbRow.verified === true),
+      suspended:           p.suspended  ?? false,
+      blocked:             p.blocked    ?? false,
+      subscriptionEndDate: p.subscriptionEndDate ?? sbRow.subscriptionEndDate,
+      subscriptionActive:  p.subscriptionEndDate
+        ? new Date(p.subscriptionEndDate) > new Date()
+        : sbRow.subscriptionActive,
+    };
+  });
+  let all = [...mergedJson, ...sbOnly];
+
+  // Gap #1 fix: enrich JSON-file providers with profiles.avatar_url.
+  // Supabase providers already have it via the profiles(avatar_url) JOIN in fetchSupabaseProviders.
+  // JSON-file providers have no Supabase query — batch-fetch their profiles here.
+  if (supabase) {
+    const jsonUserIds = [...new Set(
+      all
+        .filter((p: any) => p._source !== "supabase" && p.userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(p.userId))
+        .map((p: any) => p.userId as string),
+    )];
+    if (jsonUserIds.length > 0) {
+      try {
+        const { data: profileRows } = await supabase
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", jsonUserIds);
+        if (profileRows) {
+          const avatarMap = new Map<string, string | null>(
+            (profileRows as any[]).map((r: any) => [r.id as string, r.avatar_url ?? null]),
+          );
+          all = all.map((p: any) =>
+            p._source !== "supabase" && p.userId && avatarMap.has(p.userId)
+              ? { ...p, avatarUrl: avatarMap.get(p.userId) ?? p.avatarUrl ?? null }
+              : p,
+          );
+        }
+      } catch { /* non-fatal — Supabase unreachable, continue without enrichment */ }
+    }
+  }
+
+  if (category) all = all.filter((p: any) => p.category === category);
+
+  // Only show verified providers on the public (mobile app) feed
+  all = all.filter((p: any) => p.verified === true);
+
+  // Never show blocked or suspended providers to customers
+  all = all.filter((p: any) => !p.blocked && !p.suspended);
+
+  // Filter out providers whose subscription has expired.
+  // Mirrors isSubscriptionExpired(): checks both the flag AND the raw end date so
+  // providers whose date has passed but flag was never explicitly set to false are
+  // also hidden (e.g. JSON-file providers that pre-date the expiry-checker run).
+  all = all.filter((p: any) => {
+    if (p.subscriptionActive === false) return false;
+    if (p.subscriptionEndDate && new Date(p.subscriptionEndDate as string) <= new Date()) return false;
+    return true;
+  });
+
+  // Strict radius filter: only show providers whose service radius covers the customer's location.
+  if (hasLocation) {
+    const withDist = all.map((p: any) => {
+      const provLat: number = p.latitude ?? 23.8315;
+      const provLng: number = p.longitude ?? 91.2868;
+      const dist = parseFloat(haversineKm(customerLat!, customerLng!, provLat, provLng).toFixed(1));
+      return { ...p, distance: dist };
+    });
+
+    const filtered: any[] = [];
+    for (const p of withDist) {
+      const radius: number = Math.max(p.serviceRadius ?? 50, 50);
+      if (p.distance <= radius) filtered.push(p);
+    }
+
+    all = filtered.sort((a: any, b: any) => a.distance - b.distance);
+  }
+
+  // Ensure all providers expose avatarUrl (single source of truth: profiles.avatar_url)
+  all = all.map((p: any) => ({ ...p, avatarUrl: p.avatarUrl ?? null }));
+
+  res.json({ providers: all });
+});
+
+// GET /api/providers/by-phone/:phone — look up provider by mobile number
+router.get("/providers/by-phone/:phone", async (req, res) => {
+  const raw = req.params["phone"] as string;
+  const phone = normalizePhone(raw);
+  if (phone.length < 10) {
+    res.status(400).json({ error: "Invalid phone number" });
+    return;
+  }
+
+  // Check JSON file first
+  const jsonProviders = readProviders();
+  const jsonMatch = jsonProviders.find((p: any) => normalizePhone(p.phone ?? "") === phone);
+  if (jsonMatch) {
+    // Gap #2 fix: enrich JSON provider with profiles.avatar_url
+    if (supabase && jsonMatch.userId) {
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", jsonMatch.userId)
+          .maybeSingle();
+        if (profile?.avatar_url) {
+          res.json({ provider: { ...jsonMatch, avatarUrl: profile.avatar_url }, exists: true });
+          return;
+        }
+      } catch { /* non-fatal */ }
+    }
+    res.json({ provider: jsonMatch, exists: true });
+    return;
+  }
+
+  // Check Supabase
+  if (supabase) {
+    try {
+      // Gap #2 fix: helper to enrich a Supabase row with profiles.avatar_url
+      async function enrichWithProfile(row: any): Promise<any> {
+        if (!row.user_id) return mapSbRow(row);
+        const { data: profile } = await supabase!
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", row.user_id)
+          .maybeSingle();
+        return { ...mapSbRow(row), avatarUrl: profile?.avatar_url ?? mapSbRow(row).avatarUrl ?? null };
+      }
+
+      const { data } = await supabase
+        .from("providers")
+        .select("*")
+        .eq("phone", phone)
+        .maybeSingle();
+      if (data) {
+        res.json({ provider: await enrichWithProfile(data), exists: true });
+        return;
+      }
+      // Also try with country code
+      const { data: data2 } = await supabase
+        .from("providers")
+        .select("*")
+        .eq("phone", `+91${phone}`)
+        .maybeSingle();
+      if (data2) {
+        res.json({ provider: await enrichWithProfile(data2), exists: true });
+        return;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  res.json({ provider: null, exists: false });
+});
+
+// Returns true when the provider's subscription has lapsed.
+function isSubscriptionExpired(p: any): boolean {
+  if (p.subscriptionActive === false) return true;
+  if (p.subscriptionEndDate && new Date(p.subscriptionEndDate as string) <= new Date()) return true;
+  return false;
+}
+
+// GET /api/providers/:id
+router.get("/providers/:id", async (req, res) => {
+  const id = req.params["id"] as string;
+  const jsonProviders = readProviders();
+  const local = jsonProviders.find((p: any) => p.id === id);
+  if (local) {
+    if (isSubscriptionExpired(local)) {
+      res.status(403).json({ error: "Provider subscription has expired", code: "SUBSCRIPTION_INACTIVE" });
+      return;
+    }
+    // Enrich JSON provider with Supabase data in parallel:
+    //   - profiles.avatar_url (photo)
+    //   - reviews table (live rating + review list)
+    //   - providers row (location, serviceCharge, avatarColor, available — fixes stale JSON values)
+    if (supabase) {
+      try {
+        const profileP = local.userId
+          ? supabase.from("profiles").select("avatar_url").eq("id", local.userId).maybeSingle().then(r => r.data)
+          : Promise.resolve(null);
+        const reviewsP = supabase.from("reviews").select("*").eq("provider_id", local.userId).then(r => r.data ?? []);
+        const sbProviderP = supabase
+          .from("providers")
+          .select("location, service_charge, avatar_color, available")
+          .eq("id", id)
+          .maybeSingle()
+          .then(r => r.data);
+        const [profile, sbReviews, sbProvider] = await Promise.all([profileP, reviewsP, sbProviderP]);
+
+        const mappedReviews = (sbReviews as any[]).map((r: any) => ({
+          id: r.id,
+          reviewerName: r.reviewer_name ?? r.reviewer ?? "Anonymous",
+          reviewerInitials: r.reviewer_initials ?? (r.reviewer_name ?? "A")[0].toUpperCase(),
+          rating: r.rating,
+          comment: r.comment ?? "",
+          date: r.created_at,
+        }));
+
+        // Recalculate rating from live Supabase reviews (keeps JSON file in sync)
+        const allReviewsList = mappedReviews.length > 0 ? mappedReviews : (local.reviews ?? []);
+        const liveRating = allReviewsList.length > 0
+          ? parseFloat((allReviewsList.reduce((s: number, r: any) => s + (r.rating ?? 0), 0) / allReviewsList.length).toFixed(1))
+          : (local.rating ?? 0);
+
+        const enriched = {
+          ...local,
+          avatarUrl: profile?.avatar_url ?? local.avatarUrl ?? null,
+          reviews: allReviewsList,
+          rating: liveRating,
+          reviewCount: allReviewsList.length,
+          // Override stale display fields from the live Supabase providers row when available
+          ...(sbProvider != null ? {
+            location:      sbProvider.location       ?? local.location,
+            serviceCharge: sbProvider.service_charge ?? local.serviceCharge,
+            avatarColor:   sbProvider.avatar_color   ?? local.avatarColor,
+            available:     sbProvider.available      ?? local.available,
+          } : {}),
+        };
+        res.json({ provider: enriched });
+        return;
+      } catch {
+        // non-fatal — fall through to return the raw JSON record
+      }
+    }
+    res.json({ provider: local });
+    return;
+  }
+  // Try Supabase — do NOT use reviews(*) JOIN (no FK exists in schema)
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("providers")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (!error && data) {
+        // Fetch reviews + avatar in parallel
+        const [reviewsResult, profileResult] = await Promise.all([
+          supabase.from("reviews").select("*").eq("provider_id", data.user_id),
+          data.user_id
+            ? supabase.from("profiles").select("avatar_url").eq("id", data.user_id).maybeSingle()
+            : Promise.resolve({ data: null }),
+        ]);
+        const sbReviews = (reviewsResult.data ?? []) as any[];
+        const mappedReviews = sbReviews.map((r: any) => ({
+          id: r.id,
+          reviewerName: r.reviewer_name ?? r.reviewer ?? "Anonymous",
+          reviewerInitials: r.reviewer_initials ?? (r.reviewer_name ?? "A")[0].toUpperCase(),
+          rating: r.rating,
+          comment: r.comment ?? "",
+          date: r.created_at,
+        }));
+        const liveRating = mappedReviews.length > 0
+          ? parseFloat((mappedReviews.reduce((s: number, r: any) => s + (r.rating ?? 0), 0) / mappedReviews.length).toFixed(1))
+          : (data.rating ?? 0);
+        const mapped = mapSbRow({ ...data, reviews: [] });
+        if (mapped.subscriptionActive === false) {
+          res.status(403).json({ error: "Provider subscription has expired", code: "SUBSCRIPTION_INACTIVE" });
+          return;
+        }
+        res.json({
+          provider: {
+            ...mapped,
+            reviews: mappedReviews,
+            rating: liveRating,
+            reviewCount: mappedReviews.length || data.review_count || 0,
+            avatarUrl: (profileResult as any)?.data?.avatar_url ?? mapped.avatarUrl ?? null,
+          },
+        });
+        return;
+      }
+    } catch {
+      // fall through
+    }
+  }
+  res.status(404).json({ error: "Provider not found" });
+});
+
+// POST /api/providers — upsert by PHONE (one phone = one provider)
+router.post("/providers", (req, res) => {
+  const body = req.body as any;
+  if (!body || !body.name || !body.category) {
+    res.status(400).json({ error: "name and category are required" });
+    return;
+  }
+
+  const phone = normalizePhone(body.phone ?? "");
+  const providers = readProviders();
+
+  // Find existing record: first by phone (business key), then by id (fallback)
+  let idx = -1;
+  if (phone.length >= 10) {
+    idx = providers.findIndex((p: any) => normalizePhone(p.phone ?? "") === phone);
+  }
+  if (idx < 0 && body.id) {
+    idx = providers.findIndex((p: any) => p.id === body.id);
+  }
+
+  const existing = idx >= 0 ? providers[idx] : null;
+
+  // Build the upsert record — preserve immutable fields (id, rating, reviews, registeredAt)
+  const record = {
+    id:          existing?.id ?? body.id ?? `local-${Date.now()}`,
+    userId:      body.userId ?? existing?.userId ?? null,
+    name:        body.name,
+    category:    body.category,
+    subcategory: body.subcategory ?? existing?.subcategory ?? null,
+    // Preserve accumulated rating/reviews — never overwrite with zeros from client
+    rating:      existing?.rating ?? body.rating ?? 0,
+    reviewCount: existing?.reviewCount ?? body.reviewCount ?? 0,
+    distance:    body.distance ?? 0,
+    available:   body.available ?? existing?.available ?? true,
+    experience:  body.experience ?? existing?.experience ?? 0,
+    description: body.description ?? existing?.description ?? "",
+    phone:       body.phone ?? existing?.phone ?? "",
+    location:    body.location ?? existing?.location ?? "",
+    serviceRadius:  body.serviceRadius  ?? existing?.serviceRadius  ?? 50,
+    serviceCharge:  body.serviceCharge  ?? existing?.serviceCharge  ?? null,
+    workingHours:   body.workingHours   ?? existing?.workingHours   ?? "",
+    latitude:    body.latitude  ?? existing?.latitude  ?? 23.8315,
+    longitude:   body.longitude ?? existing?.longitude ?? 91.2868,
+    // Preserve admin-set verified status — never downgrade
+    verified:    existing?.verified ?? body.verified ?? false,
+    suspended:   existing?.suspended ?? false,
+    blocked:     existing?.blocked ?? false,
+    initials:    body.initials    ?? existing?.initials    ?? "PR",
+    avatarColor: body.avatarColor ?? existing?.avatarColor ?? "#FF6B35",
+    avatarUrl:   body.avatarUrl   ?? existing?.avatarUrl   ?? null,
+    services:    Array.isArray(body.services) ? body.services : (existing?.services ?? []),
+    reviews:     existing?.reviews ?? (Array.isArray(body.reviews) ? body.reviews : []),
+    registeredAt: existing?.registeredAt ?? body.registeredAt ?? new Date().toISOString(),
+    updatedAt:   new Date().toISOString(),
+    // Subscription expiry — set once on first registration, never overwritten on edit
+    subscriptionEndDate: existing?.subscriptionEndDate ?? (() => {
+      const settings = readSettings();
+      const days = (settings.freeTrialDays as number) ?? 180;
+      return new Date(Date.now() + days * 86400000).toISOString();
+    })(),
+  };
+
+  // For real Supabase users (valid UUID userId) write only structural fields to JSON.
+  // Display fields (location, serviceCharge, avatarColor, available, rating, reviewCount,
+  // services, description, etc.) are served from Supabase after the merge; persisting them
+  // here only creates stale-data divergence on the next edit through any other path.
+  // Mock/offline providers (non-UUID userId) continue to receive the full record as before.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isRealUser = !!(record.userId && UUID_RE.test(record.userId));
+  const jsonRecord: any = isRealUser ? {
+    id:                  record.id,
+    userId:              record.userId,
+    name:                record.name,
+    phone:               record.phone,
+    category:            record.category,
+    latitude:            record.latitude,
+    longitude:           record.longitude,
+    serviceRadius:       record.serviceRadius,
+    verified:            record.verified,
+    suspended:           record.suspended,
+    blocked:             record.blocked,
+    subscriptionEndDate: record.subscriptionEndDate,
+    registeredAt:        record.registeredAt,
+  } : record;
+
+  if (idx >= 0) {
+    providers[idx] = jsonRecord;
+  } else {
+    providers.unshift(jsonRecord);
+    // Auto-create a subscription record for new providers using the free trial period
+    if (!existing) {
+      const settings = readSettings();
+      const days = (settings.freeTrialDays as number) ?? 180;
+      const subs = readSubs();
+      const alreadyHasSub = subs.some((s: any) => s.providerId === record.id);
+      if (!alreadyHasSub) {
+        subs.push({
+          id: `sub_${Date.now()}`,
+          userId: record.userId ?? "",
+          providerId: record.id,
+          plan: "free_trial",
+          startDate: new Date().toISOString(),
+          endDate: record.subscriptionEndDate,
+          status: "active",
+          notified7: false,
+          notified3: false,
+          notified1: false,
+          notifiedExpired: false,
+        });
+        writeSubs(subs);
+      }
+    }
+  }
+
+  writeProviders(providers);
+
+  // Also persist to Supabase via service role key — this bypasses RLS and fixes
+  // the silent "null value in column id" failure that was keeping providers table at 0 rows.
+  // Only write when we have a real Supabase user (userId starts with a UUID-style string,
+  // not "local-..." or "ph-..." which are offline/demo registrations).
+  if (supabase && record.userId) {
+    supabase.from("providers").upsert(
+      {
+        id:            record.id,
+        user_id:       record.userId,
+        name:          record.name,
+        phone:         record.phone ?? "",
+        category:      record.category,
+        subcategory:   record.subcategory ?? null,
+        experience:    record.experience ?? 0,
+        description:   record.description ?? "",
+        service_radius: record.serviceRadius ?? 50,
+        service_charge: record.serviceCharge ?? null,
+        working_hours:  record.workingHours ?? "",
+        initials:      record.initials ?? "PR",
+        avatar_color:  record.avatarColor ?? "#64748B",
+        services:      record.services ?? [],
+        location:      record.location ?? "",
+        latitude:      record.latitude ?? 23.8315,
+        longitude:     record.longitude ?? 91.2868,
+        subscription_end_date: record.subscriptionEndDate ?? null,
+      },
+      { onConflict: "id" },
+    ).then(({ error }) => {
+      if (error) {
+        logger.error({ provId: record.id, dbErr: error.message }, "[providers] Supabase upsert failed");
+      }
+    }, (netErr: unknown) => {
+      logger.warn({ netErr }, "[providers] Supabase upsert network error");
+    });
+
+  }
+
+  res.json({ success: true, provider: record, updated: idx >= 0 });
+});
+
+// POST /api/providers/:id/reviews — submit a customer review for a provider
+// This route lives in providers.ts so it ships with the existing Hostinger deployment.
+router.post("/providers/:id/reviews", async (req, res) => {
+  const providerId = req.params["id"] as string;
+  const { reviewerId, reviewerName, rating, comment } = req.body as {
+    reviewerId?: string;
+    reviewerName?: string;
+    rating?: number;
+    comment?: string;
+  };
+
+  if (!reviewerId || !reviewerName || typeof rating !== "number") {
+    res.status(400).json({ error: "reviewerId, reviewerName, and rating are required" });
+    return;
+  }
+  if (rating < 1 || rating > 5) {
+    res.status(400).json({ error: "rating must be between 1 and 5" });
+    return;
+  }
+
+  const initials = reviewerName
+    .split(" ")
+    .map((w: string) => w[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  if (!supabase) {
+    res.status(503).json({ error: "Database not configured" });
+    return;
+  }
+
+  // Prevent duplicate reviews from the same reviewer for the same provider
+  const { data: existingReview } = await supabase
+    .from("reviews")
+    .select("id")
+    .eq("provider_id", providerId)
+    .eq("reviewer_id", reviewerId)
+    .maybeSingle();
+
+  if (existingReview) {
+    res.status(409).json({ error: "You have already reviewed this provider." });
+    return;
+  }
+
+  const { error: insertError } = await supabase.from("reviews").insert({
+    provider_id: providerId,
+    reviewer_id: reviewerId,
+    reviewer_name: reviewerName,
+    reviewer_initials: initials,
+    rating,
+    comment: comment ?? "",
+  });
+
+  if (insertError) {
+    res.status(500).json({ error: insertError.message });
+    return;
+  }
+
+  // Recalculate average rating and review count
+  const { data: allReviews } = await supabase
+    .from("reviews")
+    .select("rating")
+    .eq("provider_id", providerId);
+
+  if (allReviews && allReviews.length > 0) {
+    const avg = allReviews.reduce((sum: number, r: any) => sum + (r.rating ?? 0), 0) / allReviews.length;
+    await supabase
+      .from("providers")
+      .update({ rating: parseFloat(avg.toFixed(1)), review_count: allReviews.length })
+      .eq("id", providerId);
+
+    // Also update providers.json rating
+    const providers = readProviders();
+    const idx = providers.findIndex((p: any) => p.id === providerId);
+    if (idx >= 0) {
+      providers[idx].rating = parseFloat(avg.toFixed(1));
+      providers[idx].reviewCount = allReviews.length;
+      writeProviders(providers);
+    }
+  }
+
+  res.json({ success: true });
+});
+
+// PUT /api/providers/:id — explicit update by ID
+router.put("/providers/:id", (req, res) => {
+  const id = req.params["id"] as string;
+  const body = req.body as any;
+  const providers = readProviders();
+  const idx = providers.findIndex((p: any) => p.id === id);
+
+  if (idx < 0) {
+    res.status(404).json({ error: "Provider not found" });
+    return;
+  }
+
+  const existing = providers[idx];
+  providers[idx] = {
+    ...existing,
+    ...body,
+    // These fields must never be overwritten by client
+    id: existing.id,
+    rating: existing.rating,
+    reviewCount: existing.reviewCount,
+    reviews: existing.reviews,
+    registeredAt: existing.registeredAt,
+    verified: existing.verified,
+    suspended: existing.suspended,
+    blocked: existing.blocked,
+    updatedAt: new Date().toISOString(),
+  };
+
+  writeProviders(providers);
+
+  // Also sync to Supabase for real providers (fire-and-forget, non-fatal)
+  const updated = providers[idx];
+  const UUID_RE_PUT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (supabase && updated.userId && UUID_RE_PUT.test(updated.userId)) {
+    supabase.from("providers").update({
+      name:           updated.name,
+      category:       updated.category,
+      subcategory:    updated.subcategory ?? null,
+      location:       updated.location ?? "",
+      service_charge: updated.serviceCharge ?? null,
+      avatar_color:   updated.avatarColor ?? null,
+      available:      updated.available ?? true,
+      experience:     updated.experience ?? 0,
+      description:    updated.description ?? "",
+      service_radius: updated.serviceRadius ?? 50,
+      working_hours:  updated.workingHours ?? "",
+      services:       updated.services ?? [],
+      latitude:       updated.latitude ?? 23.8315,
+      longitude:      updated.longitude ?? 91.2868,
+      subscription_end_date: updated.subscriptionEndDate ?? null,
+    }).eq("id", updated.id).then(({ error }) => {
+      if (error) logger.warn({ provId: updated.id, dbErr: error.message }, "[providers] PUT Supabase sync failed");
+    });
+  }
+
+  res.json({ success: true, provider: providers[idx] });
+});
+
+export default router;

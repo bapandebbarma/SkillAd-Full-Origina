@@ -1,0 +1,137 @@
+{
+  "aboutUs": "SkillAd is an India-wide skill marketplace connecting skilled workers with customers nearby.",
+  "termsOfService": "By using SkillAd, you agree that SkillAd acts only as an advertisement and communication platform connecting users with independent service providers. SkillAd does not employ, manage, guarantee, or directly provide any services listed on the platform. Users and service providers are solely responsible for their communications, agreements, payments, and service quality.\n\nService providers are responsible for maintaining accurate profile information and professional behavior. Users may provide ratings and reviews based on their service experience. SkillAd reserves the right to suspend, remove, or permanently block any account involved in fraud, abusive behavior, fake information, illegal activity, harassment, or inappropriate content.\n\nUploading sexually explicit, abusive, misleading, or illegal images or content is strictly prohibited. If complaints are received regarding inappropriate profile photos or activities, the admin has full authority to remove content and block the account without prior notice.\n\nSkillAd does not guarantee the quality, safety, legality, or authenticity of any service provider or user. Users are encouraged to independently verify service providers before hiring.",
+  "privacyPolicy": "SkillAd respects the privacy of its users and service providers. We collect basic information such as mobile number, name, profile details, location, service category, and profile photos to help users connect with nearby service providers more efficiently.\n\nLocation access is used only to show nearby services and improve search accuracy. Mobile numbers may be used for authentication, communication, notifications, and account security purposes.\n\nSkillAd does not sell personal user information to unauthorized third parties. However, users understand that basic profile information such as name, service category, ratings, and contact options may be visible publicly within the app to help users connect with service providers.\n\nUsers are responsible for the information they upload on the platform. Any inappropriate, sexually explicit, fake, abusive, or unlawful content may result in account suspension or permanent removal.\n\nWhile SkillAd attempts to maintain a safe and reliable platform through mobile verification and moderation, we cannot guarantee the behavior or authenticity of users and service providers. Users should exercise their own judgment and caution while hiring or providing services through the platform.",
+  "helpCentre": "",
+  "refundPolicy": "",
+  "faqs": [
+    {
+      "id": "faq-1",
+      "question": "What is SkillAd?",
+      "answer": "SkillAd is an India-wide skill marketplace that helps you find verified local professionals — electricians, plumbers, tutors, beauticians, drivers and many more — based on your location."
+    },
+    {
+      "id": "faq-2",
+      "question": "Is SkillAd free for customers?",
+      "answer": "Yes. Customers can search providers, chat, and book services through the SkillAd app at no charge. Providers use subscription plans to stay visible and receive booking requests."
+    },
+    {
+      "id": "faq-3",
+      "question": "How does location-based discovery work?",
+      "answer": "SkillAd shows providers whose service area covers your current location. You only see professionals who actually serve where you are — not a random city-wide list."
+    },
+    {
+      "id": "faq-4",
+      "question": "How do I book a service?",
+      "answer": "Open the SkillAd app, search or browse a category, open a provider profile, then start a chat and send a booking request. The provider can accept, and you can confirm when the work is done."
+    },
+    {
+      "id": "faq-5",
+      "question": "Which languages does SkillAd support?",
+      "answer": "SkillAd supports multiple Indian languages in the mobile app so you can use the platform in the language you prefer."
+    },
+    {
+      "id": "faq-6",
+      "question": "How do I become a provider?",
+      "answer": "Download the SkillAd app, create an account, register as a provider with your skills and service area, then activate a subscription plan to appear in customer search results."
+    }
+  ],
+  "announcements": [],
+  "landing": {
+    "heroHeading": "Nearby Skills.\nRight When You Need Them.",
+    "heroSubtitle": "Find verified electricians, plumbers, tutors, beauticians, drivers and hundreds of skilled professionals near you.",
+    "heroAnnouncement": "",
+    "uspTitle": "No more asking for contact numbers.",
+    "uspSubtitle": "No more asking friends, neighbours or relatives for phone numbers. SkillAd puts trusted local professionals right in your pocket.",
+    "providerCtaTitle": "Offer your skills. Get discovered nearby.",
+    "providerCtaSubtitle": "Register as a provider, activate a subscription, and start receiving booking requests from customers in your service area.",
+    "providerCtaPrimaryLabel": "Register as Provider",
+    "providerCtaSecondaryLabel": "View Subscription Plans",
+    "featureCards": [
+      {
+        "id": "verified",
+        "title": "Verified Providers",
+        "description": "Profiles with mobile OTP verification and admin moderation."
+      },
+      {
+        "id": "gps",
+        "title": "GPS Matching",
+        "description": "See professionals whose service radius covers your location."
+      },
+      {
+        "id": "languages",
+        "title": "24 Languages",
+        "description": "Use SkillAd in languages spoken across India."
+      },
+      {
+        "id": "otp",
+        "title": "OTP Login",
+        "description": "Secure phone-based sign-in without passwords."
+      },
+      {
+        "id": "chat",
+        "title": "Real-time Chat",
+        "description": "Message providers, share booking details, and coordinate work."
+      },
+      {
+        "id": "booking",
+        "title": "Booking",
+        "description": "Request services, track status, and complete jobs in-app."
+      },
+      {
+        "id": "secure",
+        "title": "Secure Platform",
+        "description": "Moderation, reporting, and subscription-backed provider access."
+      }
+    ],
+    "appScreenshots": [
+      {
+        "id": "1783841142319",
+        "label": "Home",
+        "url": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1783841190375.webp"
+      },
+      {
+        "id": "1783842076680",
+        "label": "Search",
+        "url": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1783842114099.webp"
+      },
+      {
+        "id": "1783842089337",
+        "label": "Messages",
+        "url": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1783842134666.webp"
+      },
+      {
+        "id": "1783842166447",
+        "label": "Profile",
+        "url": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1783843897726.webp"
+      },
+      {
+        "id": "1783842172103",
+        "label": "Dashboard",
+        "url": "https://uauxddnhavwxfovkoldo.supabase.co/storage/v1/object/public/ads/1783842208783.webp"
+      }
+    ],
+    "howItWorks": [
+      {
+        "id": "open",
+        "title": "Open SkillAd",
+        "description": "Download the app and sign in securely with your mobile number via OTP."
+      },
+      {
+        "id": "walk",
+        "title": "Move anywhere",
+        "description": "Your location updates as you move — you never set a search radius."
+      },
+      {
+        "id": "appear",
+        "title": "Nearby professionals appear automatically",
+        "description": "Providers whose service area covers you show up in Nearby — instantly."
+      },
+      {
+        "id": "hire",
+        "title": "Chat, Call and Hire",
+        "description": "Message, call, book, and review verified professionals in one place."
+      }
+    ]
+  }
+}

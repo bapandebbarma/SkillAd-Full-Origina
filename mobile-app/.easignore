@@ -1,0 +1,45 @@
+node_modules/
+.expo/
+.git/
+android/
+ios/
+dist/
+build/
+*.log
+nohup.out
+
+# Large binary/archive files anywhere in the repo
+*.apk
+*.aab
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.mp4
+*.mp3
+*.mov
+*.PNG
+*.JPEG
+
+# pnpm workspace — other artifacts and shared libs not needed for EAS build
+# Keep pnpm-lock.yaml and pnpm-workspace.yaml uploaded so EAS can install
+# deterministically with the same workspace overrides/catalog as local.
+artifacts/admin-panel/
+artifacts/api-server/
+artifacts/landing-page/
+artifacts/mockup-sandbox/
+scripts/
+tsconfig.base.json
+tsconfig.json
+.pnpm-store/
+
+# Other large/unneeded directories
+exports/
+deploy/
+attached_assets/
+.local/
+skilladd-hostinger/
+.agents/
+screenshots/
+tmp/
+*.tsbuildinfo

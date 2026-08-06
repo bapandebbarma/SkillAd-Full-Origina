@@ -1,0 +1,6 @@
+{
+  "name": "otel-stub",
+  "version": "1.0.0",
+  "description": "Empty stub for @opentelemetry/* packages — not used in React Native",
+  "main": "index.js"
+}

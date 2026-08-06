@@ -1,0 +1,994 @@
+[
+  {
+    "id": "driver",
+    "name": "Driver",
+    "icon": "car-sport",
+    "color": "#4F46E5",
+    "subcategories": [
+      "Cab Driver",
+      "Delivery",
+      "Truck Driver"
+    ],
+    "order": 1,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 2
+  },
+  {
+    "id": "electrician",
+    "name": "Electrician",
+    "icon": "flash",
+    "color": "#F59E0B",
+    "subcategories": [
+      "Wiring",
+      "Repairs",
+      "Installation"
+    ],
+    "order": 2,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 6
+  },
+  {
+    "id": "plumber",
+    "name": "Plumber",
+    "icon": "git-branch",
+    "color": "#3B82F6",
+    "subcategories": [
+      "Pipe Fitting",
+      "Drainage",
+      "Water Heater"
+    ],
+    "order": 3,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "carpenter",
+    "name": "Carpenter",
+    "icon": "construct",
+    "color": "#92400E",
+    "subcategories": [
+      "Furniture",
+      "Doors & Windows",
+      "Flooring"
+    ],
+    "order": 4,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "cook",
+    "name": "Cook",
+    "icon": "restaurant",
+    "color": "#EF4444",
+    "subcategories": [
+      "Home Cook",
+      "Party Cook",
+      "Chef"
+    ],
+    "order": 5,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "beautician",
+    "name": "Beautician",
+    "icon": "cut",
+    "color": "#EC4899",
+    "subcategories": [
+      "Hair",
+      "Skin",
+      "Makeup"
+    ],
+    "order": 6,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "tutor",
+    "name": "Tutor",
+    "icon": "school",
+    "color": "#8B5CF6",
+    "subcategories": [
+      "School",
+      "College",
+      "Competitive Exams"
+    ],
+    "order": 7,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "cleaner",
+    "name": "Cleaner",
+    "icon": "home",
+    "color": "#10B981",
+    "subcategories": [
+      "Home Cleaning",
+      "Office Cleaning",
+      "Deep Clean"
+    ],
+    "order": 8,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "ac-repair",
+    "name": "AC Repair",
+    "icon": "thermometer",
+    "color": "#06B6D4",
+    "subcategories": [
+      "Installation",
+      "Servicing",
+      "Gas Refill"
+    ],
+    "order": 9,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "painter",
+    "name": "Painter",
+    "icon": "color-palette",
+    "color": "#F97316",
+    "subcategories": [
+      "Interior",
+      "Exterior",
+      "Waterproofing"
+    ],
+    "order": 10,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "nurse",
+    "name": "Nurse",
+    "icon": "medkit",
+    "color": "#14B8A6",
+    "subcategories": [
+      "Home Care",
+      "Post-Surgery",
+      "Elder Care"
+    ],
+    "order": 11,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 2
+  },
+  {
+    "id": "mechanic",
+    "name": "Mechanic",
+    "icon": "build",
+    "color": "#78716C",
+    "subcategories": [
+      "Car Repair",
+      "Bike Repair",
+      "Engine"
+    ],
+    "order": 12,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "guard",
+    "name": "Guard",
+    "icon": "shield",
+    "color": "#64748B",
+    "subcategories": [
+      "Home Security",
+      "Office",
+      "Event"
+    ],
+    "order": 13,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "photographer",
+    "name": "Photographer",
+    "icon": "camera",
+    "color": "#6366F1",
+    "subcategories": [
+      "Wedding",
+      "Events",
+      "Products"
+    ],
+    "order": 14,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "tailor",
+    "name": "Tailor",
+    "icon": "shirt",
+    "color": "#A855F7",
+    "subcategories": [
+      "Stitching",
+      "Alterations",
+      "Designer"
+    ],
+    "order": 15,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "gardener",
+    "name": "Gardener",
+    "icon": "leaf",
+    "color": "#22C55E",
+    "subcategories": [
+      "Lawn Care",
+      "Pruning",
+      "Landscaping"
+    ],
+    "order": 16,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "mason",
+    "name": "Mason",
+    "icon": "hammer",
+    "color": "#D97706",
+    "subcategories": [
+      "Brickwork",
+      "Plastering",
+      "Flooring"
+    ],
+    "order": 17,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "welder",
+    "name": "Welder",
+    "icon": "flame",
+    "color": "#F43F5E",
+    "subcategories": [
+      "Arc Welding",
+      "Gas Welding",
+      "Fabrication"
+    ],
+    "order": 18,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "pest-control",
+    "name": "Pest Control",
+    "icon": "bug",
+    "color": "#84CC16",
+    "subcategories": [
+      "Cockroach",
+      "Termite",
+      "Rodent"
+    ],
+    "order": 19,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "laundry",
+    "name": "Laundry",
+    "icon": "water-outline",
+    "color": "#0EA5E9",
+    "subcategories": [
+      "Wash & Fold",
+      "Dry Clean",
+      "Ironing"
+    ],
+    "order": 20,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "baby-sitter",
+    "name": "Baby Sitter",
+    "icon": "happy",
+    "color": "#FBBF24",
+    "subcategories": [
+      "Infants",
+      "Toddlers",
+      "School Age"
+    ],
+    "order": 21,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "pet-care",
+    "name": "Pet Care",
+    "icon": "paw",
+    "color": "#FB923C",
+    "subcategories": [
+      "Dog Walking",
+      "Grooming",
+      "Vet Visit"
+    ],
+    "order": 22,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "event-planner",
+    "name": "Event Planner",
+    "icon": "calendar",
+    "color": "#E879F9",
+    "subcategories": [
+      "Birthday",
+      "Corporate",
+      "Wedding"
+    ],
+    "order": 23,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "yoga-trainer",
+    "name": "Yoga Trainer",
+    "icon": "body",
+    "color": "#34D399",
+    "subcategories": [
+      "Hatha",
+      "Vinyasa",
+      "Meditation"
+    ],
+    "order": 24,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "packers-movers",
+    "name": "Packers Movers",
+    "icon": "cube",
+    "color": "#60A5FA",
+    "subcategories": [
+      "Local Move",
+      "City Move",
+      "Storage"
+    ],
+    "order": 25,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "interior-designer",
+    "name": "Interior Designer",
+    "icon": "easel",
+    "color": "#C084FC",
+    "subcategories": [
+      "Home",
+      "Office",
+      "Retail"
+    ],
+    "order": 26,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "it-support",
+    "name": "IT Support",
+    "icon": "laptop",
+    "color": "#38BDF8",
+    "subcategories": [
+      "Networking",
+      "Hardware",
+      "Software"
+    ],
+    "order": 27,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "physiotherapist",
+    "name": "Physiotherapist",
+    "icon": "fitness",
+    "color": "#10B981",
+    "subcategories": [
+      "Sports Injury",
+      "Rehab",
+      "Home Visit"
+    ],
+    "order": 28,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "gym-trainer",
+    "name": "Gym Trainer",
+    "icon": "barbell",
+    "color": "#EF4444",
+    "subcategories": [
+      "Weight Loss",
+      "Muscle Gain",
+      "Cardio"
+    ],
+    "order": 29,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "mobile-repair",
+    "name": "Mobile Repair",
+    "icon": "phone-portrait",
+    "color": "#6366F1",
+    "subcategories": [
+      "Screen",
+      "Battery",
+      "Water Damage"
+    ],
+    "order": 30,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "tv-repair",
+    "name": "TV Repair",
+    "icon": "tv",
+    "color": "#8B5CF6",
+    "subcategories": [
+      "LED",
+      "LCD",
+      "Smart TV"
+    ],
+    "order": 31,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "fridge-repair",
+    "name": "Fridge Repair",
+    "icon": "snow",
+    "color": "#06B6D4",
+    "subcategories": [
+      "Cooling",
+      "Compressor",
+      "Door Seal"
+    ],
+    "order": 32,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "washing-repair",
+    "name": "Washing Mach. Repair",
+    "icon": "refresh-circle",
+    "color": "#3B82F6",
+    "subcategories": [
+      "Front Load",
+      "Top Load",
+      "Drum"
+    ],
+    "order": 33,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "graphic-designer",
+    "name": "Graphic Designer",
+    "icon": "brush",
+    "color": "#F59E0B",
+    "subcategories": [
+      "Logo",
+      "Poster",
+      "Social Media"
+    ],
+    "order": 34,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "web-developer",
+    "name": "Web Developer",
+    "icon": "code-slash",
+    "color": "#4F46E5",
+    "subcategories": [
+      "Frontend",
+      "Backend",
+      "Full Stack"
+    ],
+    "order": 35,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "videographer",
+    "name": "Videographer",
+    "icon": "videocam",
+    "color": "#EC4899",
+    "subcategories": [
+      "Wedding",
+      "Events",
+      "YouTube"
+    ],
+    "order": 36,
+    "active": true,
+    "showOnHome": true,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "makeup-artist",
+    "name": "Makeup Artist",
+    "icon": "sparkles",
+    "color": "#F472B6",
+    "subcategories": [
+      "Bridal",
+      "Party",
+      "Film"
+    ],
+    "order": 37,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "personal-chef",
+    "name": "Personal Chef",
+    "icon": "pizza",
+    "color": "#EF4444",
+    "subcategories": [
+      "Home Dining",
+      "Events",
+      "Catering"
+    ],
+    "order": 38,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "dietitian",
+    "name": "Dietitian",
+    "icon": "nutrition",
+    "color": "#22C55E",
+    "subcategories": [
+      "Weight Loss",
+      "Diabetes",
+      "Sports"
+    ],
+    "order": 39,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "dance-instructor",
+    "name": "Dance Instructor",
+    "icon": "musical-notes",
+    "color": "#8B5CF6",
+    "subcategories": [
+      "Bollywood",
+      "Classical",
+      "Western"
+    ],
+    "order": 40,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "music-teacher",
+    "name": "Music Teacher",
+    "icon": "musical-note",
+    "color": "#6366F1",
+    "subcategories": [
+      "Guitar",
+      "Keyboard",
+      "Vocals"
+    ],
+    "order": 41,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "ca-accountant",
+    "name": "CA / Accountant",
+    "icon": "calculator",
+    "color": "#0EA5E9",
+    "subcategories": [
+      "Tax Filing",
+      "Audit",
+      "GST"
+    ],
+    "order": 42,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "lawyer",
+    "name": "Lawyer",
+    "icon": "briefcase",
+    "color": "#64748B",
+    "subcategories": [
+      "Civil",
+      "Criminal",
+      "Property"
+    ],
+    "order": 43,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "property-agent",
+    "name": "Property Agent",
+    "icon": "business",
+    "color": "#F97316",
+    "subcategories": [
+      "Buy",
+      "Sell",
+      "Rent"
+    ],
+    "order": 44,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "tile-flooring",
+    "name": "Tile & Flooring",
+    "icon": "grid",
+    "color": "#92400E",
+    "subcategories": [
+      "Ceramic",
+      "Marble",
+      "Vinyl"
+    ],
+    "order": 45,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "roofing",
+    "name": "Roofing",
+    "icon": "umbrella",
+    "color": "#78716C",
+    "subcategories": [
+      "Repair",
+      "Waterproofing",
+      "New Roof"
+    ],
+    "order": 46,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "locksmith",
+    "name": "Locksmith",
+    "icon": "lock-closed",
+    "color": "#F59E0B",
+    "subcategories": [
+      "Lock Install",
+      "Key Copy",
+      "Safe"
+    ],
+    "order": 47,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "cctv-installation",
+    "name": "CCTV Installation",
+    "icon": "eye",
+    "color": "#334155",
+    "subcategories": [
+      "Home",
+      "Office",
+      "Shop"
+    ],
+    "order": 48,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "solar-panel",
+    "name": "Solar Panel",
+    "icon": "sunny",
+    "color": "#FBBF24",
+    "subcategories": [
+      "Installation",
+      "Maintenance",
+      "Repair"
+    ],
+    "order": 49,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "generator-repair",
+    "name": "Generator Repair",
+    "icon": "battery-charging",
+    "color": "#10B981",
+    "subcategories": [
+      "Petrol",
+      "Diesel",
+      "Silent Gen"
+    ],
+    "order": 50,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "glass-glazing",
+    "name": "Glass & Glazing",
+    "icon": "contrast",
+    "color": "#38BDF8",
+    "subcategories": [
+      "Window",
+      "Door",
+      "Partition"
+    ],
+    "order": 51,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "wedding-planner",
+    "name": "Wedding Planner",
+    "icon": "heart",
+    "color": "#EC4899",
+    "subcategories": [
+      "Hindu",
+      "Christian",
+      "Civil"
+    ],
+    "order": 52,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 1
+  },
+  {
+    "id": "caterer",
+    "name": "Caterer",
+    "icon": "fast-food",
+    "color": "#EF4444",
+    "subcategories": [
+      "Veg",
+      "Non-Veg",
+      "Snacks"
+    ],
+    "order": 53,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "dj-sound",
+    "name": "DJ & Sound",
+    "icon": "volume-high",
+    "color": "#8B5CF6",
+    "subcategories": [
+      "Events",
+      "Weddings",
+      "Parties"
+    ],
+    "order": 54,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "astrologer",
+    "name": "Astrologer",
+    "icon": "planet",
+    "color": "#6366F1",
+    "subcategories": [
+      "Horoscope",
+      "Vastu",
+      "Numerology"
+    ],
+    "order": 55,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "language-tutor",
+    "name": "Language Tutor",
+    "icon": "language",
+    "color": "#A855F7",
+    "subcategories": [
+      "English",
+      "Hindi",
+      "Bengali"
+    ],
+    "order": 56,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "courier",
+    "name": "Courier",
+    "icon": "bicycle",
+    "color": "#F97316",
+    "subcategories": [
+      "Local",
+      "Intercity",
+      "Documents"
+    ],
+    "order": 57,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "elder-care",
+    "name": "Elder Care",
+    "icon": "accessibility",
+    "color": "#14B8A6",
+    "subcategories": [
+      "Companion",
+      "Medical Aid",
+      "Mobility"
+    ],
+    "order": 58,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "home-renovation",
+    "name": "Home Renovation",
+    "icon": "home-outline",
+    "color": "#F59E0B",
+    "subcategories": [
+      "Kitchen",
+      "Bathroom",
+      "Full Home"
+    ],
+    "order": 59,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "swimming-coach",
+    "name": "Swimming Coach",
+    "icon": "water",
+    "color": "#0EA5E9",
+    "subcategories": [
+      "Beginners",
+      "Advanced",
+      "Kids"
+    ],
+    "order": 60,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "security-audit",
+    "name": "Security Audit",
+    "icon": "shield-checkmark",
+    "color": "#4F46E5",
+    "subcategories": [
+      "Cyber Security",
+      "Physical",
+      "Fire Safety"
+    ],
+    "order": 61,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  },
+  {
+    "id": "more",
+    "name": "Daily Labour",
+    "icon": "hammer",
+    "color": "#94A3B8",
+    "subcategories": [
+      "Loading & Unloading",
+      "Tree cuting",
+      "Jungle Cleaning"
+    ],
+    "order": 62,
+    "active": true,
+    "showOnHome": false,
+    "homeOrder": null,
+    "searchCount": 0
+  }
+]

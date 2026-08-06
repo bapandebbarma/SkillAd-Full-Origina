@@ -1,0 +1,328 @@
+[
+  {
+    "id": "notif_3d_sub_1780467547008",
+    "title": "Subscription Expiring in 3 Days",
+    "body": "Your subscription is going to expire soon. Renew now otherwise customers cannot contact or view your profile.",
+    "type": "subscription",
+    "audience": "provider",
+    "targetUserId": "d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "timestamp": "2026-07-02T07:00:30.476Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-9665fbe7-1782882505240",
+    "title": "Work Completed 🔔",
+    "body": "Minakshi completed \"Class XII\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "9665fbe7-421e-4d93-b32c-8ac27719bfeb",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-07-01T05:08:25.240Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-9665fbe7-1782882500460",
+    "title": "Booking Accepted ✅",
+    "body": "Minakshi accepted your booking for \"Class XII\".",
+    "type": "booking",
+    "targetUserId": "9665fbe7-421e-4d93-b32c-8ac27719bfeb",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-07-01T05:08:20.460Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1782882368628",
+    "title": "Work Completed 🔔",
+    "body": "Minakshi completed \"Class XII\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-07-01T05:06:08.628Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1782882362750",
+    "title": "Booking Accepted ✅",
+    "body": "Minakshi accepted your booking for \"Class XII\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-07-01T05:06:02.750Z",
+    "read": false
+  },
+  {
+    "id": "notif_7d_sub_1780467547008",
+    "title": "Subscription Expiring in 7 Days",
+    "body": "Your subscription is going to expire soon. Renew now otherwise customers cannot contact or view your profile.",
+    "type": "subscription",
+    "audience": "provider",
+    "targetUserId": "d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "timestamp": "2026-06-29T08:19:32.392Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-be566aad-1782386542002",
+    "title": "Work Completed 🔔",
+    "body": "Jaba completed \"fdfdfdfd\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "be566aad-cc6f-4d0b-875d-dde7e8f1bc46",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-25T11:22:22.002Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-be566aad-1782386539410",
+    "title": "Booking Accepted ✅",
+    "body": "Jaba accepted your booking for \"fdfdfdfd\".",
+    "type": "booking",
+    "targetUserId": "be566aad-cc6f-4d0b-875d-dde7e8f1bc46",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-25T11:22:19.410Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-9665fbe7-1782380839374",
+    "title": "Work Completed 🔔",
+    "body": "Jaba completed \"dddd\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "9665fbe7-421e-4d93-b32c-8ac27719bfeb",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-25T09:47:19.374Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-9665fbe7-1782380837590",
+    "title": "Booking Accepted ✅",
+    "body": "Jaba accepted your booking for \"dddd\".",
+    "type": "booking",
+    "targetUserId": "9665fbe7-421e-4d93-b32c-8ac27719bfeb",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-25T09:47:17.590Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1782377935979",
+    "title": "Work Completed 🔔",
+    "body": "Jaba completed \"fsdfd\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-25T08:58:55.979Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1782377934431",
+    "title": "Booking Accepted ✅",
+    "body": "Jaba accepted your booking for \"fsdfd\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-25T08:58:54.431Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1782111990942",
+    "title": "Work Completed 🔔",
+    "body": "Tania completed \"ggg\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-22T07:06:30.942Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1782111987182",
+    "title": "Booking Accepted ✅",
+    "body": "Tania accepted your booking for \"ggg\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-22T07:06:27.182Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1781671340021",
+    "title": "Work Completed 🔔",
+    "body": "Tanu completed \"bus\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-17T04:42:20.021Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1781671300684",
+    "title": "Booking Accepted ✅",
+    "body": "Tanu accepted your booking for \"bus\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-17T04:41:40.684Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1781516895616",
+    "title": "Work Completed 🔔",
+    "body": "Minakshi completed \"gdfdsfd\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-15T09:48:15.616Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1781516890747",
+    "title": "Booking Accepted ✅",
+    "body": "Minakshi accepted your booking for \"gdfdsfd\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-15T09:48:10.747Z",
+    "read": false
+  },
+  {
+    "id": "booking-provider_completed-09700150-1781502725362",
+    "title": "Work Completed 🔔",
+    "body": "Minakshi completed \"Class XII\". Please confirm to finalise.",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "provider_completed"
+    },
+    "sentAt": "2026-06-15T05:52:05.362Z",
+    "read": false
+  },
+  {
+    "id": "booking-accepted-09700150-1781502463465",
+    "title": "Booking Accepted ✅",
+    "body": "Minakshi accepted your booking for \"Class XII\".",
+    "type": "booking",
+    "targetUserId": "09700150-6a00-4818-943b-71be5e2da438",
+    "data": {
+      "type": "booking",
+      "source": "booking_update",
+      "status": "accepted"
+    },
+    "sentAt": "2026-06-15T05:47:43.465Z",
+    "read": false
+  },
+  {
+    "id": "notif_exp_sub_1778740798998",
+    "title": "Subscription Expired",
+    "body": "Your provider account is now inactive because your subscription has expired. Renew now to start receiving customers.",
+    "type": "subscription",
+    "audience": "provider",
+    "targetUserId": "user-123",
+    "timestamp": "2026-06-15T05:23:14.285Z",
+    "read": false
+  },
+  {
+    "id": "notif_1d_sub_1778740798998",
+    "title": "Subscription Expiring Tomorrow",
+    "body": "Your subscription expires tomorrow. Renew now otherwise customers cannot contact or view your profile.",
+    "type": "subscription",
+    "audience": "provider",
+    "targetUserId": "user-123",
+    "timestamp": "2026-06-12T06:41:08.148Z",
+    "read": false
+  },
+  {
+    "id": "notif_3d_sub_1778740798998",
+    "title": "Subscription Expiring in 3 Days",
+    "body": "Your subscription is going to expire soon. Renew now otherwise customers cannot contact or view your profile.",
+    "type": "subscription",
+    "audience": "provider",
+    "targetUserId": "user-123",
+    "timestamp": "2026-06-11T08:45:16.283Z",
+    "read": false
+  },
+  {
+    "id": "review-sb-d2290-1780650094928",
+    "title": "New Review ⭐⭐⭐⭐⭐",
+    "body": "Pooja Singh gave you 5 stars — \"Excellent work, very professional!\"",
+    "type": "review",
+    "targetUserId": "d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "data": {
+      "type": "review",
+      "providerId": "sb-d22905a9-d2f4-47c8-b680-f24709ab6796",
+      "reviewerName": "Pooja Singh",
+      "rating": 5
+    },
+    "sentAt": "2026-06-05T09:01:34.928Z",
+    "read": false
+  },
+  {
+    "id": "notif-1778058235530",
+    "title": "Welcome to SkillAd!",
+    "body": "Find skilled workers near you. Browse hundreds of verified providers.",
+    "audience": "all",
+    "type": "general",
+    "sentAt": "2026-05-06T09:03:55.530Z",
+    "status": "sent"
+  }
+]

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "sb-d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "userId": "d22905a9-d2f4-47c8-b680-f24709ab6796",
+    "name": "Tanu",
+    "category": "Driver",
+    "subcategory": "Auto",
+    "rating": 0,
+    "reviewCount": 0,
+    "distance": 0,
+    "available": true,
+    "experience": 6,
+    "description": "Hsjjsjj sjjsjjs jsjjsj",
+    "phone": "8730058250",
+    "location": "Agartala, Tripura",
+    "serviceRadius": 30,
+    "serviceCharge": "700",
+    "workingHours": "",
+    "latitude": 23.8315,
+    "longitude": 91.2868,
+    "verified": true,
+    "suspended": false,
+    "blocked": false,
+    "initials": "T",
+    "avatarColor": "#64748B",
+    "services": [
+      "Car",
+      "bus",
+      "truck"
+    ],
+    "reviews": [],
+    "registeredAt": "2026-06-03T06:19:07.008Z",
+    "updatedAt": "2026-06-03T08:00:11.052Z",
+    "subscriptionEndDate": "2026-12-31T18:31:00.110Z",
+    "avatarUrl": null,
+    "subscriptionActive": true
+  },
+  {
+    "id": "sb-10e8d14a-66a8-46da-9acb-0d3d1e71d8f9",
+    "subscriptionActive": true,
+    "subscriptionEndDate": "2026-09-01T10:45:12.376Z"
+  }
+]
