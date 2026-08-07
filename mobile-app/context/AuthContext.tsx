@@ -369,16 +369,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function updateProfile(updates: Partial<User>) {
     if (!user) return;
-    const updated = { ...user, ...updates };
+
+    // Client may only promote to provider (register-provider). Never write
+    // is_provider=false to Supabase — that demoted registered providers.
+    const promoteToProvider = updates.isProvider === true;
+    const { isProvider: _ignoredRole, ...rest } = updates;
+    const updated: User = {
+      ...user,
+      ...rest,
+      isProvider: promoteToProvider || user.isProvider === true,
+    };
+
     await saveUser(updated);
     setUser(updated);
     if (supabaseUserId) {
-      // Always sync name; also sync is_provider when it changes so DB stays authoritative.
-      // This covers the case where a customer upgrades to provider via register-provider —
-      // without this, the DB retains is_provider=false and overwrites AsyncStorage on next startup.
       const profileFields: Record<string, unknown> = { name: updated.name };
-      if (updates.isProvider !== undefined) {
-        profileFields["is_provider"] = updates.isProvider;
+      if (promoteToProvider) {
+        profileFields["is_provider"] = true;
       }
       await supabase
         .from("profiles")

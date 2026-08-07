@@ -66,6 +66,7 @@ export default function EditProfileScreen() {
         httpMethod: "POST",
         uploadType: FileSystemUploadType.MULTIPART,
         mimeType,
+        parameters: { userId: supabaseUserId ?? "" },
       });
 
       console.log("[upload:edit-profile] response", { status: result.status, body: result.body });

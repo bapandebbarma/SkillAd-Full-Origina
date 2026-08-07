@@ -611,7 +611,9 @@ router.get("/admin/providers", async (_req, res) => {
     (p: any) => !sbIds.has(p.id) && !sbPhones.has(normPhone(p.phone ?? "")),
   );
 
-  // Normalise local providers to match the admin shape
+  // Normalise local providers to match the admin shape.
+  // Keep avatar fields when present in JSON; profiles.avatar_url enrichment below
+  // is still the source of truth (JSON-only / sparse real-user records often omit them).
   const normalisedLocal = localOnly.map((p: any) => ({
     id: p.id,
     userId: p.userId ?? null,
@@ -632,10 +634,47 @@ router.get("/admin/providers", async (_req, res) => {
     serviceCharge: p.serviceCharge ?? "",
     registeredAt: p.registeredAt ?? "",
     subscriptionEndDate: p.subscriptionEndDate ?? null,
+    initials: p.initials ?? p.name?.slice(0, 2)?.toUpperCase?.() ?? "PR",
+    avatarColor: p.avatarColor ?? "#64748B",
+    avatarUrl: p.avatarUrl ?? null,
     source: "local",
   }));
 
   let all: any[] = [...sbProviders, ...normalisedLocal];
+
+  // Enrich JSON/local providers with profiles.avatar_url (same Gap #1 pattern as GET /api/providers).
+  // Real UUID users are stored as sparse JSON rows without avatarUrl; admin previously dropped
+  // avatar fields entirely, so those providers always showed the default avatar.
+  if (supabase) {
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const enrichIds = [
+      ...new Set(
+        all
+          .map((p: any) => p.userId as string | null)
+          .filter((id): id is string => !!id && uuidRe.test(id)),
+      ),
+    ];
+    if (enrichIds.length > 0) {
+      try {
+        const { data: profileRows } = await supabase
+          .from("profiles")
+          .select("id, avatar_url")
+          .in("id", enrichIds);
+        if (profileRows?.length) {
+          const avatarMap = new Map<string, string | null>(
+            (profileRows as any[]).map((r: any) => [r.id as string, r.avatar_url ?? null]),
+          );
+          all = all.map((p: any) =>
+            p.userId && avatarMap.has(p.userId)
+              ? { ...p, avatarUrl: avatarMap.get(p.userId) ?? p.avatarUrl ?? null }
+              : p,
+          );
+        }
+      } catch {
+        /* non-fatal — admin list still returns without photo enrichment */
+      }
+    }
+  }
 
   // ── Enrich with per-provider metrics ─────────────────────────────────────
   // Booking stats (from messages table) and last_seen_at (from profiles)

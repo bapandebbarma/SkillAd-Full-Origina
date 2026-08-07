@@ -404,6 +404,9 @@ export default function RegisterProviderScreen() {
         httpMethod: "POST",
         uploadType: FileSystemUploadType.MULTIPART,
         mimeType,
+        // userId lets the server update profiles.avatar_url with the service-role key
+        // (same as profile.tsx). Without it, storage succeeds but DB sync is skipped.
+        parameters: { userId: supabaseUserId ?? "" },
       });
 
       console.log("[upload:register] response", { status: uploadResult.status, body: uploadResult.body });

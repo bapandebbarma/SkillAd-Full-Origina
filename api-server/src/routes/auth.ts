@@ -466,11 +466,42 @@ router.post("/auth/verify-otp", async (req, res) => {
       }, { onConflict: "id" });
     }
 
-    // Always persist is_provider + last_seen_at so the DB stays authoritative.
+    // Resolve provider role without demoting existing providers.
+    // Login screen defaults to "customer"; writing is_provider=false on every customer
+    // login wiped Dashboard access for registered/verified providers (Minakshi, Bpn, etc.).
+    // Rule: promote when login chooses provider OR profile already provider OR providers row exists.
+    let resolvedIsProvider = isProvider === true;
     try {
+      const { data: existingRole } = await supabase
+        .from("profiles")
+        .select("is_provider")
+        .eq("id", userId)
+        .maybeSingle();
+      if (existingRole?.is_provider === true) resolvedIsProvider = true;
+
+      if (!resolvedIsProvider) {
+        const { data: provByUser } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (provByUser) resolvedIsProvider = true;
+      }
+      if (!resolvedIsProvider && fullPhone) {
+        const { data: provByPhone } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("phone", fullPhone)
+          .maybeSingle();
+        if (provByPhone) resolvedIsProvider = true;
+      }
+
       await supabase
         .from("profiles")
-        .update({ is_provider: isProvider ?? false, last_seen_at: new Date().toISOString() })
+        .update({
+          is_provider: resolvedIsProvider,
+          last_seen_at: new Date().toISOString(),
+        })
         .eq("id", userId);
     } catch {
       // non-fatal — column may not exist yet; clients fall back to request param
@@ -485,6 +516,8 @@ router.post("/auth/verify-otp", async (req, res) => {
     const { hashed_token: tokenHash } = await supabaseAdminGenerateMagicLink(syntheticEmail);
 
     const resolvedName = finalProfile?.name || name || "User";
+    const finalIsProvider =
+      finalProfile?.is_provider === true || resolvedIsProvider;
 
     // ── Fix 1: Save user to local users.json so admin panel can list them
     //    even when Supabase Service Role Key is not configured on the server.
@@ -495,7 +528,7 @@ router.post("/auth/verify-otp", async (req, res) => {
         id:         userId,
         name:       resolvedName,
         phone:      fullPhone,
-        isProvider: isProvider ?? false,
+        isProvider: finalIsProvider,
         createdAt:  idx >= 0 ? (users[idx].createdAt ?? new Date().toISOString()) : new Date().toISOString(),
         source:     "otp",
       };
@@ -505,10 +538,10 @@ router.post("/auth/verify-otp", async (req, res) => {
       logger.warn({ writeErr }, "verify-otp: could not persist user to users.json");
     }
 
-    // ── Fix 2: Re-link provider record with userId on every provider login.
+    // ── Fix 2: Re-link provider record with userId when this account is a provider.
     //    Also returns the provider's JSON record ID so the app can query conversations directly.
     let providerJsonId: string | null = null;
-    if (isProvider) {
+    if (finalIsProvider) {
       try {
         const providers = readJson<any[]>("providers", []);
         const pIdx = providers.findIndex(
@@ -548,7 +581,7 @@ router.post("/auth/verify-otp", async (req, res) => {
       tokenHash:  tokenHash ?? null,
       name:       resolvedName,
       phone:      fullPhone,
-      isProvider: finalProfile?.is_provider ?? isProvider ?? false,
+      isProvider: finalIsProvider,
       avatarUrl:  finalProfile?.avatar_url ?? null,
       providerId: providerJsonId ?? null,
     });
@@ -624,12 +657,28 @@ router.get("/auth/profile/:userId", async (req, res) => {
       .eq("id", userId)
       .single();
     if (!profile) { res.json({ found: false }); return; }
+
+    // Heal stale is_provider=false when a providers row already exists (e.g. after
+    // an older customer-login overwrite). Keeps Profile "My Dashboard" consistent.
+    let isProvider = (profile as any).is_provider === true;
+    if (!isProvider) {
+      const { data: prow } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (prow) {
+        isProvider = true;
+        await supabase.from("profiles").update({ is_provider: true }).eq("id", userId);
+      }
+    }
+
     res.json({
       found: true,
       userId: profile.id,
       name: profile.name ?? null,
       avatarUrl: (profile as any).avatar_url ?? null,
-      isProvider: (profile as any).is_provider ?? false,
+      isProvider,
     });
   } catch {
     res.json({ found: false });

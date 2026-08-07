@@ -358,8 +358,8 @@ export async function registerProvider(
         experience:    providerData.experience,
         description:   providerData.description,
         service_radius: providerData.serviceRadius,
-        working_hours:  providerData.workingHours ?? "",
-        service_area:   providerData.serviceArea ?? null,
+        // Prefer serviceArea when provided; DB column is working_hours (no service_area column).
+        working_hours:  providerData.serviceArea ?? providerData.workingHours ?? "",
         service_charge: providerData.serviceCharge,
         initials:      providerData.initials,
         avatar_color:  providerData.avatarColor,
