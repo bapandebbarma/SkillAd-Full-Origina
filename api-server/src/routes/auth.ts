@@ -4,10 +4,6 @@ import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { supabase } from "../lib/supabase.js";
 import { logger } from "../lib/logger.js";
-import {
-  sendWhatsAppOtp,
-  WA_CONFIGURED,
-} from "../lib/whatsapp.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR   = resolve(__dirname, "../data");
@@ -39,7 +35,8 @@ const SUPABASE_URL = (() => {
 })();
 const SUPABASE_SERVICE_KEY = process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "";
 
-// ── MSG91 fallback config ──────────────────────────────────────────────────────
+// ── MSG91 SMS (only live OTP delivery provider) ────────────────────────────────
+// MSG91_TEMPLATE_ID must be the DLT-verified SkillAd_Login_OTP template ID.
 const MSG91_API_KEY     = process.env["MSG91_API_KEY"]     ?? "";
 const MSG91_TEMPLATE_ID = process.env["MSG91_TEMPLATE_ID"] ?? "";
 const MSG91_CONFIGURED  = !!MSG91_API_KEY && !!MSG91_TEMPLATE_ID;
@@ -47,31 +44,37 @@ const MSG91_CONFIGURED  = !!MSG91_API_KEY && !!MSG91_TEMPLATE_ID;
 const IS_PRODUCTION = process.env["NODE_ENV"] === "production";
 
 // ── OTP Test Mode ──────────────────────────────────────────────────────────────
-// OTP_TEST_MODE is ON by default until MSG91 + DLT are fully operational.
-// Demo OTP "123456" is accepted for ALL phone numbers and the generated OTP is
-// returned in the send-otp response so testers can log in without real SMS.
-// To disable (go-live): set env var  OTP_TEST_MODE=false  on the server.
-const OTP_TEST_MODE = process.env["OTP_TEST_MODE"] !== "false";
+// Demo OTP "123456" is accepted only when OTP_TEST_MODE is explicitly true/1/yes.
+// Missing OTP_TEST_MODE is treated as false (including production).
+function envFlagTrue(name: string): boolean {
+  const raw = (process.env[name] ?? "").trim().toLowerCase();
+  return raw === "true" || raw === "1" || raw === "yes";
+}
+const OTP_TEST_MODE = envFlagTrue("OTP_TEST_MODE");
+
+if (IS_PRODUCTION && OTP_TEST_MODE) {
+  logger.warn("⚠️  OTP_TEST_MODE is explicitly ON in production — demo OTP '123456' is enabled. Disable unless this is intentional.");
+}
 
 // ── Startup diagnostic ─────────────────────────────────────────────────────────
 logger.info(
   {
-    nodeEnv:            process.env["NODE_ENV"] ?? "(not set)",
-    otpTestMode:        OTP_TEST_MODE,
-    whatsappConfigured: WA_CONFIGURED,
-    msg91Fallback:      MSG91_CONFIGURED,
-    supabaseUrl:        SUPABASE_URL || "(NOT SET)",
-    supabaseKey:        SUPABASE_SERVICE_KEY ? `***${SUPABASE_SERVICE_KEY.slice(-4)}` : "(NOT SET)",
+    nodeEnv:           process.env["NODE_ENV"] ?? "(not set)",
+    otpTestMode:       OTP_TEST_MODE,
+    msg91Configured:   MSG91_CONFIGURED,
+    msg91Template:     MSG91_TEMPLATE_ID ? "SkillAd_Login_OTP" : "(NOT SET)",
+    supabaseUrl:       SUPABASE_URL || "(NOT SET)",
+    supabaseKey:       SUPABASE_SERVICE_KEY ? `***${SUPABASE_SERVICE_KEY.slice(-4)}` : "(NOT SET)",
   },
   "🔐 Auth service startup",
 );
 
 if (OTP_TEST_MODE) {
-  logger.warn("⚠️  OTP_TEST_MODE is ON — demo OTP '123456' accepted & OTPs returned in responses. Disable before go-live.");
+  logger.warn("⚠️  OTP_TEST_MODE is ON — demo OTP '123456' accepted & OTPs returned in responses.");
 }
 
-if (!WA_CONFIGURED && !MSG91_CONFIGURED) {
-  logger.warn("⚠️  Neither WhatsApp nor MSG91 is configured — OTP sending will fail for all requests");
+if (!MSG91_CONFIGURED && !OTP_TEST_MODE) {
+  logger.warn("⚠️  MSG91 is not configured — OTP sending will fail for all requests");
 }
 
 // ── Supabase admin helpers ─────────────────────────────────────────────────────
@@ -111,7 +114,7 @@ interface OtpRecord {
   expiry:   number;
   sentAt:   number;
   attempts: number;
-  channel:  "whatsapp" | "sms";
+  channel:  "sms";
 }
 const otpStore = new Map<string, OtpRecord>();
 
@@ -161,14 +164,22 @@ function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ── MSG91 fallback ─────────────────────────────────────────────────────────────
+// ── MSG91 SMS delivery ─────────────────────────────────────────────────────────
 async function sendMsg91Otp(digits: string, otp: string): Promise<{ ok: boolean; error?: string }> {
   if (!MSG91_CONFIGURED) return { ok: false, error: "MSG91 not configured" };
   try {
+    // MSG91 Send OTP v5. `otp` maps to ##OTP## on SkillAd_Login_OTP.
+    // otp_length/otp_expiry must match generateOtp() (6 digits) and in-memory expiry (10 min).
     const res = await fetch("https://control.msg91.com/api/v5/otp", {
       method:  "POST",
       headers: { "Content-Type": "application/json", "authkey": MSG91_API_KEY },
-      body:    JSON.stringify({ template_id: MSG91_TEMPLATE_ID, mobile: `91${digits}`, otp }),
+      body:    JSON.stringify({
+        template_id: MSG91_TEMPLATE_ID,
+        mobile:      `91${digits}`,
+        otp,
+        otp_length:  6,
+        otp_expiry:  10,
+      }),
     });
     const data = (await res.json()) as { type?: string; message?: string };
     if (data.type === "success") return { ok: true };
@@ -178,78 +189,44 @@ async function sendMsg91Otp(digits: string, otp: string): Promise<{ ok: boolean;
   }
 }
 
-// ── Primary OTP delivery: WhatsApp → MSG91 fallback ───────────────────────────
 async function deliverOtp(
   digits: string,
   otp:    string,
-): Promise<{ ok: boolean; channel: "whatsapp" | "sms"; error?: string }> {
-
-  if (WA_CONFIGURED) {
-    const waResult = await sendWhatsAppOtp(`+91${digits}`, otp);
-    if (waResult.ok) {
-      logger.info({ digits: `***${digits.slice(-4)}` }, "OTP delivered via WhatsApp ✓");
-      return { ok: true, channel: "whatsapp" };
-    }
-    logger.warn(
-      { waError: waResult.error, digits: `***${digits.slice(-4)}` },
-      "WhatsApp OTP failed — trying MSG91 fallback",
-    );
+): Promise<{ ok: boolean; channel: "sms"; error?: string }> {
+  if (!MSG91_CONFIGURED) {
+    return { ok: false, channel: "sms", error: "MSG91 not configured" };
   }
 
-  if (MSG91_CONFIGURED) {
-    const smsResult = await sendMsg91Otp(digits, otp);
-    if (smsResult.ok) {
-      logger.info({ digits: `***${digits.slice(-4)}` }, "OTP delivered via MSG91 SMS ✓");
-      return { ok: true, channel: "sms" };
-    }
-    return { ok: false, channel: "sms", error: smsResult.error };
+  const smsResult = await sendMsg91Otp(digits, otp);
+  if (smsResult.ok) {
+    logger.info({ digits: `***${digits.slice(-4)}`, template: "SkillAd_Login_OTP" }, "OTP delivered via MSG91 SMS ✓");
+    return { ok: true, channel: "sms" };
   }
-
-  return {
-    ok:      false,
-    channel: "whatsapp",
-    error:   "No OTP delivery service configured (WhatsApp and MSG91 both unavailable)",
-  };
+  return { ok: false, channel: "sms", error: smsResult.error };
 }
 
 // ── GET /api/auth/status ───────────────────────────────────────────────────────
 router.get("/auth/status", (_req, res) => {
   const resp: Record<string, unknown> = {
     ok:                 true,
-    whatsappConfigured: WA_CONFIGURED,
+    whatsappConfigured: false,
+    msg91Configured:    MSG91_CONFIGURED,
     msg91Fallback:      MSG91_CONFIGURED,
     supabaseReady:      !!SUPABASE_URL && !!SUPABASE_SERVICE_KEY,
     nodeEnv:            process.env["NODE_ENV"] ?? "(not set)",
     otpTestMode:        OTP_TEST_MODE,
-    version:            "v27",
-    otpDelivery:        WA_CONFIGURED ? "whatsapp" : MSG91_CONFIGURED ? "sms" : "none",
+    version:            "v28",
+    otpDelivery:        MSG91_CONFIGURED ? "sms" : "none",
     note: OTP_TEST_MODE
-      ? "OTP_TEST_MODE is ON. Demo OTP 123456 accepted for ALL numbers. Real OTP returned in send-otp response."
-      : WA_CONFIGURED
-        ? "OTPs delivered via WhatsApp. MSG91 is fallback."
-        : MSG91_CONFIGURED
-          ? "OTPs delivered via MSG91 SMS. WhatsApp not configured."
-          : "WARNING: No OTP delivery method configured.",
+      ? "OTP_TEST_MODE is ON. Demo OTP 123456 accepted. Real OTP returned in send-otp response."
+      : MSG91_CONFIGURED
+        ? "OTPs delivered via MSG91 SMS (SkillAd_Login_OTP)."
+        : "WARNING: MSG91 is not configured. OTP delivery unavailable.",
   };
   if (OTP_TEST_MODE) {
-    resp["warning"] = "⚠️ TEST MODE ACTIVE — OTP 123456 bypasses real SMS for ALL phone numbers. Disable OTP_TEST_MODE before going live.";
+    resp["warning"] = "⚠️ TEST MODE ACTIVE — OTP 123456 bypasses real SMS. Disable OTP_TEST_MODE before going live.";
   }
   res.json(resp);
-});
-
-// ── GET /api/auth/test-whatsapp ────────────────────────────────────────────────
-router.get("/auth/test-whatsapp", async (req, res) => {
-  if (req.headers["x-admin-key"] !== (process.env["ADMIN_KEY"] ?? "skillad-admin")) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  if (!WA_CONFIGURED) {
-    res.status(503).json({ ok: false, error: "WhatsApp not configured", WA_CONFIGURED: false });
-    return;
-  }
-  const testPhone = (req.query["phone"] as string) ?? "9999999999";
-  const result = await sendWhatsAppOtp(testPhone, "123456");
-  res.json({ ok: result.ok, messageId: result.messageId, error: result.error });
 });
 
 // ── POST /api/auth/send-otp ───────────────────────────────────────────────────
@@ -278,8 +255,8 @@ router.post("/auth/send-otp", async (req, res) => {
     return;
   }
 
-  // In local/test mode allow OTP generation even without WhatsApp or MSG91
-if (!OTP_TEST_MODE && !WA_CONFIGURED && !MSG91_CONFIGURED) {
+  // In local/test mode allow OTP generation even without MSG91
+if (!OTP_TEST_MODE && !MSG91_CONFIGURED) {
   addLog(digits, "blocked", undefined, "No OTP service configured");
   res.status(503).json({
     error: "OTP service is not configured. Please contact support."
@@ -293,7 +270,7 @@ if (!OTP_TEST_MODE && !WA_CONFIGURED && !MSG91_CONFIGURED) {
     expiry:   Date.now() + 10 * 60 * 1000,
     sentAt:   Date.now(),
     attempts: 0,
-    channel:  "whatsapp",
+    channel:  "sms",
   });
 
   const { ok, channel, error: deliveryErr } = await deliverOtp(digits, otp);
@@ -313,15 +290,13 @@ if (!OTP_TEST_MODE && !WA_CONFIGURED && !MSG91_CONFIGURED) {
     }
   } else {
     addLog(digits, "blocked", channel, deliveryErr);
-    // In dev or test mode: keep OTP in store so verify-otp with "123456" still works.
-    // In production (without test mode): delete immediately so undelivered OTPs can't be guessed.
-    if (IS_PRODUCTION && !OTP_TEST_MODE) {
-      otpStore.delete(digits);
-      logger.error({ deliveryErr }, "send-otp failed — all delivery methods exhausted");
-      res.status(503).json({ error: "Unable to send OTP. Please try again or contact support." });
-    } else {
-      logger.warn({ deliveryErr }, "send-otp: delivery failed but OTP kept in store (dev/test mode) — use devOtp or '123456'");
+    if (OTP_TEST_MODE) {
+      logger.warn({ deliveryErr }, "send-otp: delivery failed but OTP kept in store (OTP_TEST_MODE) — use devOtp or '123456'");
       res.json({ success: true, channel: "dev", devOtp: otp });
+    } else {
+      otpStore.delete(digits);
+      logger.error({ deliveryErr }, "send-otp failed — MSG91 delivery failed");
+      res.status(503).json({ error: "Unable to send OTP. Please try again or contact support." });
     }
   }
 });
@@ -365,8 +340,8 @@ router.post("/auth/verify-otp", async (req, res) => {
     return;
   }
 
-  // "123456" is accepted outside production, OR when OTP_TEST_MODE=true (temporary)
-  const isDemoOtp = (!IS_PRODUCTION || OTP_TEST_MODE) && otp === "123456";
+  // Demo OTP "123456" is accepted only when OTP_TEST_MODE is explicitly true.
+  const isDemoOtp = OTP_TEST_MODE && otp === "123456";
 
   if (!isDemoOtp && stored.otp !== otp) {
     const left = 5 - stored.attempts;
@@ -604,7 +579,7 @@ router.post("/auth/resend-otp", async (req, res) => {
     return;
   }
 
-  if (!WA_CONFIGURED && !MSG91_CONFIGURED) {
+  if (!MSG91_CONFIGURED && !OTP_TEST_MODE) {
     res.status(503).json({ error: "OTP service is not configured. Please contact support." });
     return;
   }
@@ -623,7 +598,7 @@ router.post("/auth/resend-otp", async (req, res) => {
     expiry:   Date.now() + 10 * 60 * 1000,
     sentAt:   Date.now(),
     attempts: 0,
-    channel:  "whatsapp",
+    channel:  "sms",
   });
 
   const { ok, channel, error: deliveryErr } = await deliverOtp(digits, otp);
@@ -633,7 +608,14 @@ router.post("/auth/resend-otp", async (req, res) => {
     if (rec) rec.channel = channel;
     addLog(digits, "resend", channel);
     if (!IS_PRODUCTION) logger.info({ otp, channel }, "DEV: resend OTP (server logs only)");
-    res.json({ success: true, channel });
+    if (OTP_TEST_MODE) {
+      res.json({ success: true, channel, devOtp: otp });
+    } else {
+      res.json({ success: true, channel });
+    }
+  } else if (OTP_TEST_MODE) {
+    addLog(digits, "resend", "dev", deliveryErr);
+    res.json({ success: true, channel: "dev", devOtp: otp });
   } else {
     otpStore.delete(digits);
     addLog(digits, "blocked", channel, deliveryErr);
@@ -712,31 +694,6 @@ router.get("/auth/resolve/:phone", async (req, res) => {
 // ── GET /api/admin/otp-logs ────────────────────────────────────────────────────
 router.get("/admin/otp-logs", (_req, res) => {
   res.json({ logs: otpLog, total: otpLog.length });
-});
-
-// ── WhatsApp Webhook ──────────────────────────────────────────────────────────
-// GET  /api/auth/whatsapp-webhook  — Meta verification challenge
-// POST /api/auth/whatsapp-webhook  — incoming message events (ignored for OTP flow)
-
-const WA_VERIFY_TOKEN = process.env["WHATSAPP_VERIFY_TOKEN"] ?? "skilladd_whatsapp_hook_v1";
-
-router.get("/auth/whatsapp-webhook", (req, res) => {
-  const mode      = req.query["hub.mode"];
-  const token     = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
-
-  if (mode === "subscribe" && token === WA_VERIFY_TOKEN) {
-    logger.info("WhatsApp webhook verified by Meta");
-    res.status(200).send(challenge);
-  } else {
-    logger.warn({ mode, token }, "WhatsApp webhook verification failed — token mismatch");
-    res.sendStatus(403);
-  }
-});
-
-router.post("/auth/whatsapp-webhook", (req, res) => {
-  // Acknowledge immediately — we don't process incoming WhatsApp messages
-  res.sendStatus(200);
 });
 
 export default router;
