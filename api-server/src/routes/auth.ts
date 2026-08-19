@@ -1,4 +1,5 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import { timingSafeEqual } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -55,6 +56,102 @@ const OTP_TEST_MODE = envFlagTrue("OTP_TEST_MODE");
 if (IS_PRODUCTION && OTP_TEST_MODE) {
   logger.warn("⚠️  OTP_TEST_MODE is explicitly ON in production — demo OTP '123456' is enabled. Disable unless this is intentional.");
 }
+
+// ── Google Play reviewer numbers (server-only; never in the APK) ──────────────
+// SMS is skipped only when phone + 6-digit code + USER_ID are all configured.
+// Demo OTP 123456 is never a valid reviewer code.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const BLOCKED_REVIEWER_CODE = "123456";
+
+interface ReviewerSlot {
+  role: "customer" | "provider";
+  phone: string;
+  code: string;
+  userId: string;
+}
+
+function envDigits(name: string): string {
+  return (process.env[name] ?? "").replace(/\D/g, "").slice(-10);
+}
+
+function envSecret(name: string): string {
+  return (process.env[name] ?? "").trim();
+}
+
+function loadReviewerSlot(
+  role: "customer" | "provider",
+  phoneKey: string,
+  codeKey: string,
+  userIdKey: string,
+): ReviewerSlot | null {
+  const phone = envDigits(phoneKey);
+  const code = envSecret(codeKey);
+  const userId = envSecret(userIdKey).toLowerCase();
+  if (phone.length !== 10 || !UUID_RE.test(userId)) return null;
+  if (!/^\d{6}$/.test(code) || code === BLOCKED_REVIEWER_CODE) return null;
+  return { role, phone, code, userId };
+}
+
+const REVIEWER_SLOTS: ReviewerSlot[] = [
+  loadReviewerSlot(
+    "customer",
+    "PLAY_REVIEWER_CUSTOMER_PHONE",
+    "PLAY_REVIEWER_CUSTOMER_CODE",
+    "PLAY_REVIEWER_CUSTOMER_USER_ID",
+  ),
+  loadReviewerSlot(
+    "provider",
+    "PLAY_REVIEWER_PROVIDER_PHONE",
+    "PLAY_REVIEWER_PROVIDER_CODE",
+    "PLAY_REVIEWER_PROVIDER_USER_ID",
+  ),
+].filter((s): s is ReviewerSlot => s !== null);
+
+function getReviewerSlot(digits: string): ReviewerSlot | null {
+  return REVIEWER_SLOTS.find((s) => s.phone === digits) ?? null;
+}
+
+function codesEqual(submitted: string, expected: string): boolean {
+  const a = Buffer.from(submitted, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+/** Reviewer verify: max 8 failures per phone+IP per 15 minutes. */
+const reviewerFailWindow = 15 * 60 * 1000;
+const reviewerFailMax = 8;
+const reviewerFails = new Map<string, number[]>();
+const reviewerSendAt = new Map<string, number>();
+
+function reviewerClientKey(req: Request, digits: string): string {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  return `${ip}:${digits}`;
+}
+
+function reviewerVerifyLimited(req: Request, digits: string): boolean {
+  const key = reviewerClientKey(req, digits);
+  const now = Date.now();
+  const recent = (reviewerFails.get(key) ?? []).filter((t) => now - t < reviewerFailWindow);
+  reviewerFails.set(key, recent);
+  return recent.length >= reviewerFailMax;
+}
+
+function recordReviewerVerifyFail(req: Request, digits: string): void {
+  const key = reviewerClientKey(req, digits);
+  const now = Date.now();
+  const recent = (reviewerFails.get(key) ?? []).filter((t) => now - t < reviewerFailWindow);
+  recent.push(now);
+  reviewerFails.set(key, recent);
+}
+
+logger.info(
+  {
+    reviewerCustomerConfigured: REVIEWER_SLOTS.some((s) => s.role === "customer"),
+    reviewerProviderConfigured: REVIEWER_SLOTS.some((s) => s.role === "provider"),
+  },
+  "Play reviewer login slots",
+);
 
 // ── Startup diagnostic ─────────────────────────────────────────────────────────
 logger.info(
@@ -205,6 +302,221 @@ async function deliverOtp(
   return { ok: false, channel: "sms", error: smsResult.error };
 }
 
+async function completeVerifiedLogin(input: {
+  res: Response;
+  digits: string;
+  name?: string;
+  isProvider?: boolean;
+  forceIsProvider?: boolean;
+  expectedUserId?: string;
+  skipNameUpdate?: boolean;
+}): Promise<void> {
+  const { res, digits, name, isProvider, forceIsProvider, expectedUserId, skipNameUpdate } = input;
+  const fullPhone = `+91${digits}`;
+
+  if (!supabase || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    res.status(503).json({ error: "Authentication service not configured. Contact support." });
+    return;
+  }
+
+  const syntheticEmail = `${digits}@users.skillad.in`;
+
+  const { data: profileRecord } = await supabase
+    .from("profiles")
+    .select("id, name, avatar_url, is_provider, blocked")
+    .eq("phone", fullPhone)
+    .maybeSingle();
+
+  if ((profileRecord as { blocked?: boolean } | null)?.blocked === true) {
+    logger.warn({ digits: `***${digits.slice(-4)}` }, "verify-otp: login rejected — account blocked");
+    res.status(403).json({ error: "Your account has been blocked. Please contact support." });
+    return;
+  }
+
+  if (expectedUserId) {
+    if (!profileRecord?.id) {
+      logger.warn({ digits: `***${digits.slice(-4)}` }, "reviewer-login: profile not provisioned");
+      res.status(403).json({ error: "Reviewer account is not provisioned. Contact support." });
+      return;
+    }
+    if (profileRecord.id.toLowerCase() !== expectedUserId) {
+      logger.warn({ digits: `***${digits.slice(-4)}` }, "reviewer-login: user id mismatch");
+      res.status(403).json({ error: "Reviewer account mismatch. Contact support." });
+      return;
+    }
+  }
+
+  let userId: string;
+
+  if (profileRecord?.id) {
+    userId = profileRecord.id;
+    if (name && !skipNameUpdate) await supabase.from("profiles").update({ name }).eq("id", userId);
+  } else {
+    const { user: newUser, error: createErr } = await supabaseAdminCreateUser({
+      email:          syntheticEmail,
+      email_confirm:  true,
+      phone:          fullPhone,
+      phone_confirm:  true,
+      user_metadata:  { name: name || "User" },
+    });
+
+    if (newUser && (newUser as Record<string, unknown>).id) {
+      userId = (newUser as Record<string, unknown>).id as string;
+      logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: new Supabase user created ✓");
+    } else {
+      let existingId: string | null = null;
+      try {
+        let page = 1;
+        searchLoop: while (page <= 10) {
+          const listRes = await fetch(
+            `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=100`,
+            { headers: supabaseAdminHeaders() },
+          );
+          if (!listRes.ok) break;
+          const listData = await listRes.json() as { users?: { id: string; email?: string }[] };
+          const users = listData.users ?? [];
+          if (users.length === 0) break;
+          const match = users.find(u => u.email === syntheticEmail);
+          if (match) { existingId = match.id; break searchLoop; }
+          if (users.length < 100) break;
+          page++;
+        }
+      } catch (searchErr) {
+        logger.warn({ searchErr }, "verify-otp: user list search failed");
+      }
+
+      if (!existingId) {
+        logger.error({ createErr }, "verify-otp: supabase admin createUser failed and could not find existing user");
+        res.status(500).json({ error: "Account creation failed. Please try again." });
+        return;
+      }
+      userId = existingId;
+      logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: found existing auth user by email ✓");
+    }
+
+    await supabase.from("profiles").upsert({
+      id:    userId,
+      name:  name || "User",
+      phone: fullPhone,
+    }, { onConflict: "id" });
+  }
+
+  let resolvedIsProvider = forceIsProvider !== undefined ? forceIsProvider : isProvider === true;
+  try {
+    if (forceIsProvider === undefined) {
+      const { data: existingRole } = await supabase
+        .from("profiles")
+        .select("is_provider")
+        .eq("id", userId)
+        .maybeSingle();
+      if (existingRole?.is_provider === true) resolvedIsProvider = true;
+
+      if (!resolvedIsProvider) {
+        const { data: provByUser } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (provByUser) resolvedIsProvider = true;
+      }
+      if (!resolvedIsProvider && fullPhone) {
+        const { data: provByPhone } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("phone", fullPhone)
+          .maybeSingle();
+        if (provByPhone) resolvedIsProvider = true;
+      }
+    }
+
+    await supabase
+      .from("profiles")
+      .update({
+        is_provider: resolvedIsProvider,
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
+  } catch {
+    // non-fatal — column may not exist yet; clients fall back to request param
+  }
+
+  const { data: finalProfile } = await supabase
+    .from("profiles")
+    .select("name, avatar_url, is_provider")
+    .eq("id", userId)
+    .single();
+
+  const { hashed_token: tokenHash } = await supabaseAdminGenerateMagicLink(syntheticEmail);
+
+  const resolvedName = finalProfile?.name || name || "User";
+  const finalIsProvider =
+    forceIsProvider !== undefined
+      ? forceIsProvider
+      : finalProfile?.is_provider === true || resolvedIsProvider;
+
+  try {
+    const users = readJson<any[]>("users", []);
+    const idx   = users.findIndex((u: any) => u.id === userId || normalizePhone(u.phone ?? "") === digits);
+    const entry = {
+      id:         userId,
+      name:       resolvedName,
+      phone:      fullPhone,
+      isProvider: finalIsProvider,
+      createdAt:  idx >= 0 ? (users[idx].createdAt ?? new Date().toISOString()) : new Date().toISOString(),
+      source:     expectedUserId ? "reviewer" : "otp",
+    };
+    if (idx >= 0) { users[idx] = { ...users[idx], ...entry }; } else { users.unshift(entry); }
+    writeJson("users", users);
+  } catch (writeErr) {
+    logger.warn({ writeErr }, "verify-otp: could not persist user to users.json");
+  }
+
+  let providerJsonId: string | null = null;
+  if (finalIsProvider) {
+    try {
+      const providers = readJson<any[]>("providers", []);
+      const pIdx = providers.findIndex(
+        (p: any) => normalizePhone(p.phone ?? "") === digits,
+      );
+      if (pIdx >= 0) {
+        providerJsonId = providers[pIdx].id ?? null;
+        if (providers[pIdx].userId !== userId) {
+          providers[pIdx] = { ...providers[pIdx], userId };
+          writeJson("providers", providers);
+          logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: re-linked provider userId in JSON ✓");
+        }
+      }
+    } catch (linkErr) {
+      logger.warn({ linkErr }, "verify-otp: could not re-link provider userId in JSON");
+    }
+
+    if (supabase) {
+      try {
+        const { error: syncErr } = await supabase
+          .from("providers")
+          .update({ user_id: userId })
+          .eq("phone", fullPhone);
+        if (!syncErr) {
+          logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: synced provider user_id to Supabase ✓");
+        }
+      } catch {
+        // non-fatal
+      }
+    }
+  }
+
+  res.json({
+    success:    true,
+    userId,
+    tokenHash:  tokenHash ?? null,
+    name:       resolvedName,
+    phone:      fullPhone,
+    isProvider: finalIsProvider,
+    avatarUrl:  finalProfile?.avatar_url ?? null,
+    providerId: providerJsonId ?? null,
+  });
+}
+
 // ── GET /api/auth/status ───────────────────────────────────────────────────────
 router.get("/auth/status", (_req, res) => {
   const resp: Record<string, unknown> = {
@@ -246,7 +558,21 @@ router.post("/auth/send-otp", async (req, res) => {
     return;
   }
 
-  // Rate limit: 60 seconds between sends
+  const reviewerSend = getReviewerSlot(digits);
+  if (reviewerSend) {
+    const lastSend = reviewerSendAt.get(digits) ?? 0;
+    if (Date.now() - lastSend < 60 * 1000) {
+      const waitSec = Math.ceil((60 * 1000 - (Date.now() - lastSend)) / 1000);
+      addLog(digits, "blocked", undefined, `Reviewer send rate limited — ${waitSec}s remaining`);
+      res.status(429).json({ error: `Please wait ${waitSec} seconds before requesting another OTP.` });
+      return;
+    }
+    reviewerSendAt.set(digits, Date.now());
+    addLog(digits, "send", "reviewer");
+    logger.info({ digits: `***${digits.slice(-4)}` }, "send-otp: reviewer number — SMS skipped");
+    res.json({ success: true, channel: "sms" });
+    return;
+  }
   const existing = otpStore.get(digits);
   if (existing && Date.now() - existing.sentAt < 60 * 1000) {
     const waitSec = Math.ceil((60 * 1000 - (Date.now() - existing.sentAt)) / 1000);
@@ -320,10 +646,41 @@ router.post("/auth/verify-otp", async (req, res) => {
     return;
   }
 
-  const digits    = normalizePhone(phone);
-  const fullPhone = `+91${digits}`;
+  const digits = normalizePhone(phone);
 
-  // Validate OTP
+  const reviewer = getReviewerSlot(digits);
+  if (reviewer) {
+    if (reviewerVerifyLimited(req, digits)) {
+      addLog(digits, "blocked", "reviewer", "Reviewer verify rate limited");
+      res.status(429).json({ error: "Too many failed attempts. Please try again later." });
+      return;
+    }
+    if (!codesEqual(String(otp), reviewer.code)) {
+      recordReviewerVerifyFail(req, digits);
+      addLog(digits, "verify_fail", "reviewer");
+      res.status(400).json({ error: "Incorrect OTP. Please try again." });
+      return;
+    }
+    reviewerFails.delete(reviewerClientKey(req, digits));
+    addLog(digits, "verify_ok", "reviewer");
+    logger.info({ digits: `***${digits.slice(-4)}`, role: reviewer.role }, "verify-otp: reviewer code accepted");
+    try {
+      await completeVerifiedLogin({
+        res,
+        digits,
+        name,
+        forceIsProvider: reviewer.role === "provider",
+        expectedUserId: reviewer.userId,
+        skipNameUpdate: true,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Verification failed. Please try again.";
+      logger.error({ err: msg }, "verify-otp: reviewer session error");
+      res.status(500).json({ error: msg });
+    }
+    return;
+  }
+
   const stored = otpStore.get(digits);
   if (!stored || Date.now() > stored.expiry) {
     addLog(digits, "expired");
@@ -352,213 +709,16 @@ router.post("/auth/verify-otp", async (req, res) => {
     return;
   }
 
-  // OTP correct — clear it
   otpStore.delete(digits);
   addLog(digits, "verify_ok", stored.channel);
   logger.info({ digits: `***${digits.slice(-4)}` }, "verify-otp: OTP correct ✓");
 
-  if (!supabase || !SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    res.status(503).json({ error: "Authentication service not configured. Contact support." });
-    return;
-  }
-
   try {
-    const syntheticEmail = `${digits}@users.skillad.in`;
-
-    const { data: profileRecord } = await supabase
-      .from("profiles")
-      .select("id, name, avatar_url, is_provider, blocked")
-      .eq("phone", fullPhone)
-      .maybeSingle();
-
-    // Blocked users cannot log in
-    if ((profileRecord as any)?.blocked === true) {
-      logger.warn({ digits: `***${digits.slice(-4)}` }, "verify-otp: login rejected — account blocked");
-      res.status(403).json({ error: "Your account has been blocked. Please contact support." });
-      return;
-    }
-
-    let userId: string;
-
-    if (profileRecord?.id) {
-      // Existing user — found via profiles table (most common path)
-      userId = profileRecord.id;
-      if (name) await supabase.from("profiles").update({ name }).eq("id", userId);
-    } else {
-      // New user (or edge case: auth user exists without a profiles row).
-      // Try to create a new Supabase auth user first.
-      const { user: newUser, error: createErr } = await supabaseAdminCreateUser({
-        email:          syntheticEmail,
-        email_confirm:  true,
-        phone:          fullPhone,
-        phone_confirm:  true,
-        user_metadata:  { name: name || "User" },
-      });
-
-      if (newUser && (newUser as Record<string, unknown>).id) {
-        // Brand new user created successfully
-        userId = (newUser as Record<string, unknown>).id as string;
-        logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: new Supabase user created ✓");
-      } else {
-        // Creation failed — auth user probably already exists with this email.
-        // Search the users list page-by-page and match by exact email (client-side).
-        // NOTE: The admin users list API does NOT support email filtering via query params —
-        //       passing ?email=... returns ALL users, not filtered results. Must search manually.
-        let existingId: string | null = null;
-        try {
-          let page = 1;
-          searchLoop: while (page <= 10) {
-            const listRes = await fetch(
-              `${SUPABASE_URL}/auth/v1/admin/users?page=${page}&per_page=100`,
-              { headers: supabaseAdminHeaders() },
-            );
-            if (!listRes.ok) break;
-            const listData = await listRes.json() as { users?: { id: string; email?: string }[] };
-            const users = listData.users ?? [];
-            if (users.length === 0) break;
-            const match = users.find(u => u.email === syntheticEmail);
-            if (match) { existingId = match.id; break searchLoop; }
-            if (users.length < 100) break;
-            page++;
-          }
-        } catch (searchErr) {
-          logger.warn({ searchErr }, "verify-otp: user list search failed");
-        }
-
-        if (!existingId) {
-          logger.error({ createErr }, "verify-otp: supabase admin createUser failed and could not find existing user");
-          res.status(500).json({ error: "Account creation failed. Please try again." });
-          return;
-        }
-        userId = existingId;
-        logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: found existing auth user by email ✓");
-      }
-
-      await supabase.from("profiles").upsert({
-        id:    userId,
-        name:  name || "User",
-        phone: fullPhone,
-      }, { onConflict: "id" });
-    }
-
-    // Resolve provider role without demoting existing providers.
-    // Login screen defaults to "customer"; writing is_provider=false on every customer
-    // login wiped Dashboard access for registered/verified providers (Minakshi, Bpn, etc.).
-    // Rule: promote when login chooses provider OR profile already provider OR providers row exists.
-    let resolvedIsProvider = isProvider === true;
-    try {
-      const { data: existingRole } = await supabase
-        .from("profiles")
-        .select("is_provider")
-        .eq("id", userId)
-        .maybeSingle();
-      if (existingRole?.is_provider === true) resolvedIsProvider = true;
-
-      if (!resolvedIsProvider) {
-        const { data: provByUser } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (provByUser) resolvedIsProvider = true;
-      }
-      if (!resolvedIsProvider && fullPhone) {
-        const { data: provByPhone } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("phone", fullPhone)
-          .maybeSingle();
-        if (provByPhone) resolvedIsProvider = true;
-      }
-
-      await supabase
-        .from("profiles")
-        .update({
-          is_provider: resolvedIsProvider,
-          last_seen_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
-    } catch {
-      // non-fatal — column may not exist yet; clients fall back to request param
-    }
-
-    const { data: finalProfile } = await supabase
-      .from("profiles")
-      .select("name, avatar_url, is_provider")
-      .eq("id", userId)
-      .single();
-
-    const { hashed_token: tokenHash } = await supabaseAdminGenerateMagicLink(syntheticEmail);
-
-    const resolvedName = finalProfile?.name || name || "User";
-    const finalIsProvider =
-      finalProfile?.is_provider === true || resolvedIsProvider;
-
-    // ── Fix 1: Save user to local users.json so admin panel can list them
-    //    even when Supabase Service Role Key is not configured on the server.
-    try {
-      const users = readJson<any[]>("users", []);
-      const idx   = users.findIndex((u: any) => u.id === userId || normalizePhone(u.phone ?? "") === digits);
-      const entry = {
-        id:         userId,
-        name:       resolvedName,
-        phone:      fullPhone,
-        isProvider: finalIsProvider,
-        createdAt:  idx >= 0 ? (users[idx].createdAt ?? new Date().toISOString()) : new Date().toISOString(),
-        source:     "otp",
-      };
-      if (idx >= 0) { users[idx] = { ...users[idx], ...entry }; } else { users.unshift(entry); }
-      writeJson("users", users);
-    } catch (writeErr) {
-      logger.warn({ writeErr }, "verify-otp: could not persist user to users.json");
-    }
-
-    // ── Fix 2: Re-link provider record with userId when this account is a provider.
-    //    Also returns the provider's JSON record ID so the app can query conversations directly.
-    let providerJsonId: string | null = null;
-    if (finalIsProvider) {
-      try {
-        const providers = readJson<any[]>("providers", []);
-        const pIdx = providers.findIndex(
-          (p: any) => normalizePhone(p.phone ?? "") === digits,
-        );
-        if (pIdx >= 0) {
-          providerJsonId = providers[pIdx].id ?? null;
-          if (providers[pIdx].userId !== userId) {
-            providers[pIdx] = { ...providers[pIdx], userId };
-            writeJson("providers", providers);
-            logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: re-linked provider userId in JSON ✓");
-          }
-        }
-      } catch (linkErr) {
-        logger.warn({ linkErr }, "verify-otp: could not re-link provider userId in JSON");
-      }
-
-      // Also sync user_id to Supabase providers table (for providers registered via Supabase)
-      if (supabase) {
-        try {
-          const { error: syncErr } = await supabase
-            .from("providers")
-            .update({ user_id: userId })
-            .eq("phone", fullPhone);
-          if (!syncErr) {
-            logger.info({ digits: `***${digits.slice(-4)}`, userId }, "verify-otp: synced provider user_id to Supabase ✓");
-          }
-        } catch {
-          // non-fatal
-        }
-      }
-    }
-
-    res.json({
-      success:    true,
-      userId,
-      tokenHash:  tokenHash ?? null,
-      name:       resolvedName,
-      phone:      fullPhone,
-      isProvider: finalIsProvider,
-      avatarUrl:  finalProfile?.avatar_url ?? null,
-      providerId: providerJsonId ?? null,
+    await completeVerifiedLogin({
+      res,
+      digits,
+      name,
+      isProvider,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "Verification failed. Please try again.";
@@ -576,6 +736,21 @@ router.post("/auth/resend-otp", async (req, res) => {
   const digits = normalizePhone(phone);
   if (digits.length !== 10) {
     res.status(400).json({ error: "Enter a valid 10-digit mobile number" });
+    return;
+  }
+
+  const reviewerResend = getReviewerSlot(digits);
+  if (reviewerResend) {
+    const lastSend = reviewerSendAt.get(digits) ?? 0;
+    if (Date.now() - lastSend < 60 * 1000) {
+      const waitSec = Math.ceil((60 * 1000 - (Date.now() - lastSend)) / 1000);
+      res.status(429).json({ error: `Please wait ${waitSec} seconds before requesting another OTP.` });
+      return;
+    }
+    reviewerSendAt.set(digits, Date.now());
+    addLog(digits, "resend", "reviewer");
+    logger.info({ digits: `***${digits.slice(-4)}` }, "resend-otp: reviewer number — SMS skipped");
+    res.json({ success: true, channel: "sms" });
     return;
   }
 
