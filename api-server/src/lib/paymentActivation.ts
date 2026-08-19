@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import { supabase } from "./supabase.js";
 import { logger } from "./logger.js";
 import { getRazorpayClient } from "./razorpay.js";
+import { sendPostPaymentTransactionalSms } from "./subscriptionSms.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = resolve(__dirname, "../data");
@@ -42,6 +43,11 @@ export interface SubscriptionRecord {
   notified3: boolean;
   notified1: boolean;
   notifiedExpired: boolean;
+  /** SMS dedupe — one activation SMS per endDate */
+  smsActivatedForEndDate?: string;
+  smsNotified7?: boolean;
+  smsNotified3?: boolean;
+  smsNotified1?: boolean;
   /** Paid activation metadata (additive) */
   planId?: string;
   paymentId?: string;
@@ -69,6 +75,8 @@ export interface PaymentHistoryRecord {
   activatedAt: string;
   expiryDate: string;
   createdAt: string;
+  smsPaymentSuccessSent?: boolean;
+  smsSubscriptionActivatedSent?: boolean;
 }
 
 export interface ActivationResult {
@@ -339,6 +347,17 @@ export async function activateSubscriptionAfterPayment(input: {
       },
       "Subscription activated after payment",
     );
+
+    // Transactional SMS — non-blocking; never affects activation success
+    void sendPostPaymentTransactionalSms({
+      userId,
+      providerId,
+      planId,
+      planName,
+      amount,
+      expiryDate,
+      razorpayPaymentId,
+    });
 
     return {
       activated: true,

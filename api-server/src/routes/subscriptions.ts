@@ -3,6 +3,10 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { supabase } from "../lib/supabase.js";
+import {
+  notifySubscriptionActivatedIfNeeded,
+  queueSubscriptionReminderSms,
+} from "../lib/subscriptionSms.js";
 
 const router = Router();
 
@@ -21,6 +25,10 @@ interface Subscription {
   notified3: boolean;
   notified1: boolean;
   notifiedExpired: boolean;
+  smsActivatedForEndDate?: string;
+  smsNotified7?: boolean;
+  smsNotified3?: boolean;
+  smsNotified1?: boolean;
 }
 
 function readSubs(): Subscription[] {
@@ -243,6 +251,13 @@ router.post("/subscriptions", (req: Request, res: Response) => {
     writeProviders(providers);
   }
 
+  void notifySubscriptionActivatedIfNeeded({
+    userId,
+    providerId,
+    planId: plan,
+    endDate: endDate.toISOString(),
+  });
+
   res.json({ success: true, subscription: sub });
 });
 
@@ -259,6 +274,12 @@ router.post("/subscriptions/trial", (req: Request, res: Response) => {
   }
 
   const sub = createAndPersistTrialSubscription(userId, providerId);
+  void notifySubscriptionActivatedIfNeeded({
+    userId,
+    providerId,
+    planId: "trial",
+    endDate: sub.endDate,
+  });
   res.json({ success: true, subscription: sub, trialDays: getFreeTrialDays() });
 });
 
@@ -363,6 +384,37 @@ export function runSubscriptionExpiryCheck(): void {
         targetUserId: sub.userId,
         timestamp: new Date().toISOString(),
         read: false,
+      });
+    }
+
+    // SMS retry logic is intentionally independent from in-app notified flags.
+    // This allows hourly retries when MSG91 fails, while still deduping on smsNotified*.
+    if (daysLeft > 0 && daysLeft <= 1 && !sub.smsNotified1) {
+      queueSubscriptionReminderSms({
+        subscriptionId: sub.id,
+        userId: sub.userId,
+        providerId: sub.providerId,
+        planId: sub.plan,
+        daysRemaining: daysLeft,
+        threshold: 1,
+      });
+    } else if (daysLeft > 1 && daysLeft <= 3 && !sub.smsNotified3) {
+      queueSubscriptionReminderSms({
+        subscriptionId: sub.id,
+        userId: sub.userId,
+        providerId: sub.providerId,
+        planId: sub.plan,
+        daysRemaining: daysLeft,
+        threshold: 3,
+      });
+    } else if (daysLeft > 3 && daysLeft <= 7 && !sub.smsNotified7) {
+      queueSubscriptionReminderSms({
+        subscriptionId: sub.id,
+        userId: sub.userId,
+        providerId: sub.providerId,
+        planId: sub.plan,
+        daysRemaining: daysLeft,
+        threshold: 7,
       });
     }
   }

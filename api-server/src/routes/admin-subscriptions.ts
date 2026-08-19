@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { supabase } from "../lib/supabase.js";
+import { notifySubscriptionActivatedIfNeeded } from "../lib/subscriptionSms.js";
 
 const router = Router();
 
@@ -329,6 +330,28 @@ router.put("/admin/subscriptions/:providerId", async (req: Request, res: Respons
     performedBy: "admin",
   });
 
+  if (newStatus === "active" && newEndDate) {
+    const freshProviders = readJson<any[]>("providers", []);
+    const provRec = freshProviders.find(
+      (p: any) => p.id === providerId || p.userId === providerId,
+    );
+    const inferredUserId = providerId.startsWith("sb-") ? providerId.slice(3) : "";
+    const userId = provRec?.userId ?? inferredUserId;
+    const subsAfter = readJson<any[]>("subscriptions", []);
+    const subRec = subsAfter.find(
+      (s: any) => s.providerId === providerId || s.userId === providerId || s.userId === userId,
+    );
+    const planId = plan ?? subRec?.plan ?? "subscription";
+    if (userId) {
+      void notifySubscriptionActivatedIfNeeded({
+        userId,
+        providerId,
+        planId,
+        endDate: newEndDate,
+      });
+    }
+  }
+
   res.json({ success: true, providerId, action, newEndDate, newStatus });
 });
 
@@ -425,6 +448,13 @@ router.post("/admin/renewal-requests/:id/approve", async (req: Request, res: Res
     newStatus: "active",
     reason: reason ?? "Manual renewal approved",
     performedBy: "admin",
+  });
+
+  void notifySubscriptionActivatedIfNeeded({
+    userId: rr.userId,
+    providerId: rr.providerId,
+    planId: plan ?? rr.plan,
+    endDate: approvedEndDate,
   });
 
   res.json({ success: true, newEndDate: approvedEndDate });
