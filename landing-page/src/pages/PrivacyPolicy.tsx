@@ -262,7 +262,11 @@ export default function PrivacyPolicyPage() {
                 cannot be undone.
               </p>
               <p>
-                You may also request deletion by emailing{" "}
+                You may also request deletion at{" "}
+                <a href="https://skillad.in/delete-account" className="text-primary hover:underline">
+                  https://skillad.in/delete-account
+                </a>{" "}
+                or by emailing{" "}
                 <a href={`mailto:${email}`} className="text-primary hover:underline">
                   {email}
                 </a>
@@ -350,6 +354,9 @@ export default function PrivacyPolicyPage() {
             </Link>
             <a href="/privacy-policy" className="hover:text-white">
               Privacy Policy
+            </a>
+            <a href="/delete-account" className="hover:text-white">
+              Delete Account
             </a>
             <a href={`mailto:${email}`} className="hover:text-white">
               Support

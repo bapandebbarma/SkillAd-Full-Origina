@@ -70,6 +70,9 @@ export default function Footer({ onModal, onDownload }: FooterProps) {
               <a href="/privacy-policy" className="hover:text-white transition-colors">
                 Privacy Policy
               </a>
+              <a href="/delete-account" className="hover:text-white transition-colors">
+                Delete Account
+              </a>
               <button type="button" onClick={() => onModal("terms")} className="text-left hover:text-white transition-colors">
                 Terms of Service
               </button>

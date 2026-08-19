@@ -6,6 +6,9 @@ RewriteEngine On
 # Canonical Privacy Policy (static HTML — no login, no app, readable without SPA JS)
 RewriteRule ^privacy-policy/?$ privacy-policy.html [L]
 
+# Google Play / public account deletion request (static HTML — no login)
+RewriteRule ^delete-account/?$ delete-account.html [L]
+
 # Legacy short URL → canonical policy (does not match /privacy-policy)
 RewriteRule ^privacy/?$ /privacy-policy [R=301,L]
 
