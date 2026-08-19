@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import ProviderPublicProfilePage from "@/pages/ProviderPublicProfile";
+import PrivacyPolicyPage from "@/pages/PrivacyPolicy";
 import {
   fetchContent,
   fetchCategories,
@@ -64,32 +65,33 @@ function ContentModal({
 
   useEffect(() => {
     if (!open) return;
+    if (type === "privacy") {
+      onClose();
+      window.location.assign("/privacy-policy");
+      return;
+    }
     setLoading(true);
     fetchContent()
       .then(setContent)
       .catch(() => setContent(null))
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, type]);
 
   const title =
-    type === "privacy"
-      ? "Privacy Policy"
-      : type === "terms"
-        ? "Terms of Service"
-        : type === "refund"
-          ? "Refund Policy"
-          : type === "contact"
-            ? "Contact Us"
-            : "";
+    type === "terms"
+      ? "Terms of Service"
+      : type === "refund"
+        ? "Refund Policy"
+        : type === "contact"
+          ? "Contact Us"
+          : "";
 
   const body =
-    type === "privacy"
-      ? content?.privacyPolicy
-      : type === "terms"
-        ? content?.termsOfService
-        : type === "refund"
-          ? content?.refundPolicy
-          : null;
+    type === "terms"
+      ? content?.termsOfService
+      : type === "refund"
+        ? content?.refundPolicy
+        : null;
 
   const email = appLinks?.supportEmail || "support@skillad.in";
   const phone = appLinks?.supportPhone || "";
@@ -419,7 +421,13 @@ function Home() {
   return (
     <div className="min-h-[100dvh] w-full bg-white flex flex-col font-sans selection:bg-primary/20 selection:text-primary">
       <Header
-        onModal={setModal}
+        onModal={(t) => {
+          if (t === "privacy") {
+            window.location.assign("/privacy-policy");
+            return;
+          }
+          setModal(t);
+        }}
         onDownload={handleDownload}
         languages={appLinks.enabledLanguages}
       />
@@ -451,7 +459,13 @@ function Home() {
         </Suspense>
       </main>
       <Footer
-        onModal={(t) => setModal(t)}
+        onModal={(t) => {
+          if (t === "privacy") {
+            window.location.assign("/privacy-policy");
+            return;
+          }
+          setModal(t);
+        }}
         onDownload={handleDownload}
       />
       <ContentModal
@@ -476,6 +490,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/privacy-policy" component={PrivacyPolicyPage} />
       <Route path="/provider/:providerId" component={ProviderPublicProfilePage} />
       <Route component={NotFound} />
     </Switch>

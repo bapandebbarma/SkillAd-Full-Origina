@@ -491,11 +491,7 @@ export default function ProfileScreen() {
 
   function handlePrivacy() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCmsModal({
-      title: t.privacyPolicy,
-      icon: "🔒",
-      body: cmsContent?.privacyPolicy || t.privacyPolicyBody,
-    });
+    Linking.openURL("https://skillad.in/privacy-policy").catch(() => {});
   }
 
   return (

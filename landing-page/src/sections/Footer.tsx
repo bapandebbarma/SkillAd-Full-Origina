@@ -56,20 +56,20 @@ export default function Footer({ onModal, onDownload }: FooterProps) {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-white/35 mb-4">Quick links</p>
             <div className="flex flex-col gap-2 text-sm">
-              <a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a>
-              <a href="#categories" className="hover:text-white transition-colors">Categories</a>
-              <a href="#nearby" className="hover:text-white transition-colors">Providers</a>
-              <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
-              <a href="#contact" className="hover:text-white transition-colors">Contact</a>
+              <a href="/#how-it-works" className="hover:text-white transition-colors">How it Works</a>
+              <a href="/#categories" className="hover:text-white transition-colors">Categories</a>
+              <a href="/#nearby" className="hover:text-white transition-colors">Providers</a>
+              <a href="/#faq" className="hover:text-white transition-colors">FAQ</a>
+              <a href="/#contact" className="hover:text-white transition-colors">Contact</a>
             </div>
           </div>
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-white/35 mb-4">Legal</p>
             <div className="flex flex-col gap-2 text-sm">
-              <button type="button" onClick={() => onModal("privacy")} className="text-left hover:text-white transition-colors">
+              <a href="/privacy-policy" className="hover:text-white transition-colors">
                 Privacy Policy
-              </button>
+              </a>
               <button type="button" onClick={() => onModal("terms")} className="text-left hover:text-white transition-colors">
                 Terms of Service
               </button>

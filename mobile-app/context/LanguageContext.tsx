@@ -547,7 +547,98 @@ type Strings = {
   failedToSubmit: string;
 };
 
-const translations: Record<AppLanguage, Strings> = {
+/** Keys actually present on each bundled language object (through `budget`). */
+type CoreStrings = Pick<
+  Strings,
+  | "account"
+  | "support"
+  | "editProfile"
+  | "myLocation"
+  | "language"
+  | "helpCenter"
+  | "termsOfService"
+  | "privacyPolicy"
+  | "signOut"
+  | "youreOnline"
+  | "youreOffline"
+  | "customersCanFind"
+  | "wontReceiveBookings"
+  | "registerAsProvider"
+  | "earnMoneyWithSkills"
+  | "inviteFriends"
+  | "shareWithFriendsFamily"
+  | "verifiedProvider"
+  | "selectCity"
+  | "selectLanguage"
+  | "signOutTitle"
+  | "signOutMessage"
+  | "signOutConfirm"
+  | "cancel"
+  | "hi"
+  | "detectingLocation"
+  | "categories"
+  | "nearbySkilled"
+  | "viewAll"
+  | "noProvidersFound"
+  | "offerSkills"
+  | "searchPlaceholder"
+  | "searchSkills"
+  | "availableNow"
+  | "nearest"
+  | "topRated"
+  | "mostReviews"
+  | "within"
+  | "noProvidersMatch"
+  | "tryAdjustingFilters"
+  | "providersFound"
+  | "messages"
+  | "noMessagesYet"
+  | "noMessagesDesc"
+  | "findProviders"
+  | "message"
+  | "notifications"
+  | "unread"
+  | "markAllRead"
+  | "pushNotifActive"
+  | "noNotificationsYet"
+  | "notifDesc"
+  | "justNow"
+  | "dashboard"
+  | "becomeProvider"
+  | "becomeProviderDesc"
+  | "quickActions"
+  | "earnings"
+  | "myListing"
+  | "reviews"
+  | "share"
+  | "bookingRequests"
+  | "newLabel"
+  | "pending"
+  | "active"
+  | "done"
+  | "ratingLabel"
+  | "availableForJobs"
+  | "notAvailable"
+  | "online"
+  | "offline"
+  | "estimatedEarnings"
+  | "fromCompletedJobs"
+  | "noBookingRequests"
+  | "noBookingDesc"
+  | "markDone"
+  | "accept"
+  | "decline"
+  | "markComplete"
+  | "markCompleteConfirm"
+  | "declineBooking"
+  | "declineBookingConfirm"
+  | "service"
+  | "date"
+  | "time"
+  | "budget"
+>;
+
+const bundledTranslations: Record<AppLanguage, CoreStrings> = {
   English: {
     account: "Account", support: "Support", editProfile: "Edit Profile",
     myLocation: "My Location", language: "Language", helpCenter: "Help Center",
@@ -1665,7 +1756,7 @@ const translations: Record<AppLanguage, Strings> = {
   },
 };
 /** Newly added UI strings — English copied to all languages until verified translations exist. */
-const EXTRA_STRINGS: Record<string, string> = {
+const EXTRA_STRINGS: Omit<Strings, keyof CoreStrings> = {
   connectWithSkilled: "Connect with Skilled\nProfessionals Near You",
   hireSkillsTagline: "Hire Skills. Get Work. All in One Place.",
   workers: "Workers",
@@ -2156,9 +2247,36 @@ const EXTRA_STRINGS: Record<string, string> = {
   failedToSubmit: "Failed to submit",
 };
 
-for (const lang of ALL_LANGUAGES) {
-  Object.assign(translations[lang], EXTRA_STRINGS as Partial<Strings>);
+function withExtraStrings(core: CoreStrings): Strings {
+  return { ...core, ...EXTRA_STRINGS };
 }
+
+const translations: Record<AppLanguage, Strings> = {
+  English: withExtraStrings(bundledTranslations.English),
+  Assamese: withExtraStrings(bundledTranslations.Assamese),
+  Bengali: withExtraStrings(bundledTranslations.Bengali),
+  Bodo: withExtraStrings(bundledTranslations.Bodo),
+  Dogri: withExtraStrings(bundledTranslations.Dogri),
+  Gujarati: withExtraStrings(bundledTranslations.Gujarati),
+  Hindi: withExtraStrings(bundledTranslations.Hindi),
+  Kannada: withExtraStrings(bundledTranslations.Kannada),
+  Kashmiri: withExtraStrings(bundledTranslations.Kashmiri),
+  Kokborok: withExtraStrings(bundledTranslations.Kokborok),
+  Konkani: withExtraStrings(bundledTranslations.Konkani),
+  Maithili: withExtraStrings(bundledTranslations.Maithili),
+  Malayalam: withExtraStrings(bundledTranslations.Malayalam),
+  Manipuri: withExtraStrings(bundledTranslations.Manipuri),
+  Marathi: withExtraStrings(bundledTranslations.Marathi),
+  Nepali: withExtraStrings(bundledTranslations.Nepali),
+  Odia: withExtraStrings(bundledTranslations.Odia),
+  Punjabi: withExtraStrings(bundledTranslations.Punjabi),
+  Sanskrit: withExtraStrings(bundledTranslations.Sanskrit),
+  Santali: withExtraStrings(bundledTranslations.Santali),
+  Sindhi: withExtraStrings(bundledTranslations.Sindhi),
+  Tamil: withExtraStrings(bundledTranslations.Tamil),
+  Telugu: withExtraStrings(bundledTranslations.Telugu),
+  Urdu: withExtraStrings(bundledTranslations.Urdu),
+};
 
 
 

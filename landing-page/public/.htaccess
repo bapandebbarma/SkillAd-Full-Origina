@@ -3,6 +3,12 @@
 
 RewriteEngine On
 
+# Canonical Privacy Policy (static HTML — no login, no app, readable without SPA JS)
+RewriteRule ^privacy-policy/?$ privacy-policy.html [L]
+
+# Legacy short URL → canonical policy (does not match /privacy-policy)
+RewriteRule ^privacy/?$ /privacy-policy [R=301,L]
+
 # Crawlers requesting /provider/:id get server-rendered OG HTML (not the SPA shell)
 RewriteCond %{HTTP_USER_AGENT} (WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Baiduspider|DuckDuckBot|Slurp) [NC]
 RewriteRule ^provider/([^/]+)/?$ provider-og.php?id=$1 [L,QSA]
