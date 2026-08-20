@@ -11,11 +11,13 @@ import {
   appendContactAudit,
   createContactMessage,
   deleteContactMessage,
+  deletionWorkflowStatus,
   getContactMessage,
   listContactMessages,
   updateContactStatus,
   type ContactStatus,
 } from "../lib/contactMessagesStore.js";
+import { supabase } from "../lib/supabase.js";
 
 const router = Router();
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -157,6 +159,84 @@ router.post("/contact", async (req, res) => {
   } catch (e) {
     logger.error({ e }, "contact: submit failed");
     res.status(500).json({ error: "Failed to send message. Please try again later." });
+  }
+});
+
+function maskEmail(email: string): string {
+  const e = email.trim().toLowerCase();
+  const at = e.indexOf("@");
+  if (at <= 1) return "***";
+  return `${e[0]}***${e.slice(at)}`;
+}
+
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length < 4) return "***";
+  return `+91 XXXXXX${digits.slice(-4)}`;
+}
+
+async function lookupProfileIdByPhone(phone: string): Promise<string | null> {
+  if (!supabase) return null;
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  if (digits.length < 10) return null;
+  const variants = [`+91${digits}`, `91${digits}`, digits];
+  for (const p of variants) {
+    const { data } = await supabase.from("profiles").select("id").eq("phone", p).maybeSingle();
+    if (data?.id) return String(data.id);
+  }
+  return null;
+}
+
+// ── Admin: account deletion requests (filtered contact_messages) ──────────────
+router.get("/admin/deletion-requests", adminAuth, async (req, res) => {
+  try {
+    const statusRaw = String(req.query.status ?? "all");
+    const status =
+      statusRaw === "all" || isValidStatus(statusRaw) ? (statusRaw as ContactStatus | "all") : "all";
+    const search = String(req.query.search ?? "");
+    const page = parseInt(String(req.query.page ?? "1"), 10) || 1;
+    const limit = parseInt(String(req.query.limit ?? "20"), 10) || 20;
+
+    const result = await listContactMessages({
+      status,
+      search,
+      page,
+      limit,
+      deletionRequestsOnly: true,
+    });
+
+    const requests = await Promise.all(
+      result.messages.map(async (m) => {
+        const userId = await lookupProfileIdByPhone(m.phone);
+        return {
+          id: m.id,
+          userId,
+          name: m.name,
+          emailMasked: maskEmail(m.email),
+          phoneMasked: maskPhone(m.phone),
+          email: m.email,
+          phone: m.phone,
+          subject: m.subject,
+          message: m.message,
+          createdAt: m.createdAt,
+          status: m.status,
+          workflowStatus: deletionWorkflowStatus(m.status),
+          readAt: m.readAt,
+          repliedAt: m.repliedAt,
+          source: m.source,
+          ipAddress: m.ipAddress,
+        };
+      }),
+    );
+
+    res.json({
+      requests,
+      total: result.total,
+      pendingCount: result.unreadCount,
+    });
+  } catch (e) {
+    logger.error({ e }, "contact: deletion-requests list failed");
+    res.status(500).json({ error: "Failed to load deletion requests" });
   }
 });
 

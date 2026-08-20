@@ -9,10 +9,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { BrandedSplash } from "@/components/BrandedSplash";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppReviewPrompt } from "@/components/AppReviewPrompt";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
@@ -21,6 +22,9 @@ import { LanguageProvider, useLanguage } from "@/context/LanguageContext";
 import { useNotifications } from "@/hooks/useNotifications";
 
 SplashScreen.preventAutoHideAsync();
+
+/** Brief branded handoff after native splash (title + tagline). Keep short to avoid double-splash feel. */
+const BRAND_SPLASH_MS = 1100;
 
 export const queryClient = new QueryClient();
 
@@ -106,14 +110,25 @@ export default function RootLayout() {
     Inter_700Bold,
     ...Ionicons.font,
   });
+  const [showBrandSplash, setShowBrandSplash] = useState(true);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (!(fontsLoaded || fontError)) return;
+    // Hide native splash only once the branded JS screen can paint (same white bg).
+    void SplashScreen.hideAsync();
+    const timer = setTimeout(() => setShowBrandSplash(false), BRAND_SPLASH_MS);
+    return () => clearTimeout(timer);
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
+
+  if (showBrandSplash) {
+    return (
+      <SafeAreaProvider>
+        <BrandedSplash />
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <SafeAreaProvider>

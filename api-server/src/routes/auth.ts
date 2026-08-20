@@ -1,10 +1,11 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
 import { timingSafeEqual } from "crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { supabase } from "../lib/supabase.js";
 import { logger } from "../lib/logger.js";
+import { appendOtpAudit, listOtpAudit, sanitizeOtpDetail } from "../lib/otpAuditStore.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR   = resolve(__dirname, "../data");
@@ -236,7 +237,7 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
-// ── OTP activity log (last 200 events) ────────────────────────────────────────
+// ── OTP activity log (live ring buffer + persistent Supabase audit) ────────────
 interface OtpLogEntry {
   ts:      string;
   phone:   string;
@@ -246,10 +247,29 @@ interface OtpLogEntry {
 }
 const otpLog: OtpLogEntry[] = [];
 
+function adminAuth(req: Request, res: Response, next: NextFunction): void {
+  const adminKey = process.env["ADMIN_KEY"] ?? "skillad-admin";
+  const provided = req.headers["x-admin-key"];
+  if (provided !== adminKey) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
+
 function addLog(phone: string, event: OtpLogEntry["event"], channel?: string, detail?: string) {
   const masked = phone.length >= 4 ? `+91 XXXXXX${phone.slice(-4)}` : phone;
-  otpLog.unshift({ ts: new Date().toISOString(), phone: masked, event, channel, detail });
+  const safeDetail = sanitizeOtpDetail(detail) ?? undefined;
+  otpLog.unshift({ ts: new Date().toISOString(), phone: masked, event, channel, detail: safeDetail });
   if (otpLog.length > 200) otpLog.pop();
+  // Persist asynchronously — never block OTP delivery/verify on audit write.
+  void appendOtpAudit({
+    phoneMasked: masked,
+    eventType: event,
+    channel: channel ?? null,
+    detail: safeDetail ?? null,
+    provider: channel === "reviewer" ? "reviewer" : channel === "test" ? "test" : "MSG91",
+  });
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -866,9 +886,83 @@ router.get("/auth/resolve/:phone", async (req, res) => {
   res.json({ userId: null });
 });
 
-// ── GET /api/admin/otp-logs ────────────────────────────────────────────────────
-router.get("/admin/otp-logs", (_req, res) => {
-  res.json({ logs: otpLog, total: otpLog.length });
+// ── GET /api/admin/otp-logs — persistent history (+ optional live buffer) ──────
+router.get("/admin/otp-logs", adminAuth, async (req, res) => {
+  try {
+    const eventRaw = String(req.query.event ?? "all");
+    const page = parseInt(String(req.query.page ?? "1"), 10) || 1;
+    const limit = parseInt(String(req.query.limit ?? "100"), 10) || 100;
+    const source = String(req.query.source ?? "persistent"); // persistent | live
+
+    if (source === "live") {
+      res.json({
+        logs: otpLog.map((l) => ({
+          id: undefined,
+          ts: l.ts,
+          phone: l.phone,
+          event: l.event,
+          channel: l.channel,
+          detail: l.detail,
+          provider: l.channel === "reviewer" ? "reviewer" : "MSG91",
+        })),
+        total: otpLog.length,
+        source: "live",
+      });
+      return;
+    }
+
+    const eventType =
+      eventRaw === "all" ||
+      ["send", "resend", "verify_ok", "verify_fail", "expired", "blocked"].includes(eventRaw)
+        ? (eventRaw as any)
+        : "all";
+
+    const { logs, total } = await listOtpAudit({ eventType, page, limit });
+    res.json({
+      logs: logs.map((l) => ({
+        id: l.id,
+        ts: l.createdAt,
+        phone: l.phoneMasked,
+        event: l.eventType,
+        channel: l.channel,
+        detail: l.detail,
+        success: l.success,
+        provider: l.provider,
+      })),
+      total,
+      source: "persistent",
+      page,
+      limit,
+    });
+  } catch (e: any) {
+    logger.error({ err: e?.message }, "admin otp-logs failed");
+    // Fallback to in-memory if DB unavailable
+    res.json({
+      logs: otpLog.map((l) => ({
+        ts: l.ts,
+        phone: l.phone,
+        event: l.event,
+        channel: l.channel,
+        detail: l.detail,
+      })),
+      total: otpLog.length,
+      source: "live_fallback",
+      warning: "Persistent OTP audit unavailable; showing in-memory buffer only",
+    });
+  }
+});
+
+// ── GET /api/admin/otp-config — safe MSG91 status (never returns secrets) ─────
+router.get("/admin/otp-config", adminAuth, (_req, res) => {
+  res.json({
+    msg91Configured: MSG91_CONFIGURED,
+    templateConfigured: !!MSG91_TEMPLATE_ID,
+    apiKeyConfigured: !!MSG91_API_KEY,
+    otpTestMode: OTP_TEST_MODE,
+    nodeEnv: process.env["NODE_ENV"] ?? "undefined",
+    isProduction: IS_PRODUCTION,
+    provider: "MSG91",
+  });
 });
 
 export default router;

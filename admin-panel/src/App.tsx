@@ -11,6 +11,7 @@ import Notifications from "./pages/Notifications";
 import Content from "./pages/Content";
 import AppReviews from "./pages/AppReviews";
 import ContactMessages from "./pages/ContactMessages";
+import DeletionRequests from "./pages/DeletionRequests";
 import Analytics from "./pages/Analytics";
 import Rankings from "./pages/Rankings";
 import Settings from "./pages/Settings";
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="/" component={Dashboard} />
               <Route path="/providers" component={Providers} />
               <Route path="/users" component={Users} />
+              <Route path="/deletion-requests" component={DeletionRequests} />
               <Route path="/categories" component={Categories} />
               <Route path="/subscriptions" component={Subscriptions} />
               <Route path="/advertisements" component={Advertisements} />

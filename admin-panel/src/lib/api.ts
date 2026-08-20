@@ -77,8 +77,31 @@ export const api = {
   sendNotification: (data: any) => req<any>("POST", "/admin/notifications", data),
   deleteNotification: (id: string) => req<any>("DELETE", `/admin/notifications/${id}`),
 
-  // OTP Logs
-  getOtpLogs: () => req<any>("GET", "/admin/otp-logs"),
+  // OTP Logs (persistent audit + safe MSG91 status — never returns secrets)
+  getOtpLogs: (opts?: { event?: string; page?: number; limit?: number; source?: string }) => {
+    const q = new URLSearchParams();
+    if (opts?.event) q.set("event", opts.event);
+    if (opts?.page) q.set("page", String(opts.page));
+    if (opts?.limit) q.set("limit", String(opts.limit));
+    if (opts?.source) q.set("source", opts.source);
+    const qs = q.toString();
+    return req<any>("GET", `/admin/otp-logs${qs ? `?${qs}` : ""}`);
+  },
+  getOtpConfig: () => req<any>("GET", "/admin/otp-config"),
+
+  // Account deletion requests (filtered contact_messages from delete-account page)
+  getDeletionRequests: (opts?: { status?: string; search?: string; page?: number; limit?: number }) => {
+    const q = new URLSearchParams();
+    if (opts?.status && opts.status !== "all") q.set("status", opts.status);
+    if (opts?.search) q.set("search", opts.search);
+    if (opts?.page) q.set("page", String(opts.page));
+    if (opts?.limit) q.set("limit", String(opts.limit));
+    const qs = q.toString();
+    return req<{ requests: any[]; total: number; pendingCount: number }>(
+      "GET",
+      `/admin/deletion-requests${qs ? `?${qs}` : ""}`,
+    );
+  },
 
   // Subscription management
   getAdminSubscriptions: () => req<any>("GET", "/admin/subscriptions"),

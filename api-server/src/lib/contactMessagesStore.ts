@@ -47,7 +47,12 @@ export interface ListContactOptions {
   search?: string;
   page?: number;
   limit?: number;
+  /** When true, only rows that look like account-deletion web requests. */
+  deletionRequestsOnly?: boolean;
 }
+
+/** Subject set by landing-page/public/delete-account.html */
+export const DELETION_REQUEST_SUBJECT = "Account deletion request";
 
 function rowToMessage(row: any): ContactMessage {
   return {
@@ -117,6 +122,13 @@ export async function listContactMessages(
     query = query.eq("status", opts.status);
   }
 
+  if (opts.deletionRequestsOnly) {
+    // Match the public delete-account form subject (and defensive message prefix).
+    query = query.or(
+      `subject.ilike.%Account deletion request%,message.ilike.%ACCOUNT DELETION REQUEST%`,
+    );
+  }
+
   const search = (opts.search ?? "").trim();
   if (search) {
     const safe = search.replace(/[%_,]/g, "");
@@ -133,10 +145,16 @@ export async function listContactMessages(
     throw new Error(error.message);
   }
 
-  const { count: unreadCount, error: unreadErr } = await db
+  let unreadQuery = db
     .from("contact_messages")
     .select("*", { count: "exact", head: true })
     .eq("status", "new");
+  if (opts.deletionRequestsOnly) {
+    unreadQuery = unreadQuery.or(
+      `subject.ilike.%Account deletion request%,message.ilike.%ACCOUNT DELETION REQUEST%`,
+    );
+  }
+  const { count: unreadCount, error: unreadErr } = await unreadQuery;
 
   if (unreadErr) {
     logger.warn({ unreadErr }, "contact: unread count failed");
@@ -147,6 +165,15 @@ export async function listContactMessages(
     total: count ?? 0,
     unreadCount: unreadCount ?? 0,
   };
+}
+
+/** Map contact_messages.status → admin deletion-request workflow label. */
+export function deletionWorkflowStatus(
+  status: ContactStatus,
+): "Pending" | "Processing" | "Completed" {
+  if (status === "new") return "Pending";
+  if (status === "closed") return "Completed";
+  return "Processing"; // read | replied
 }
 
 export async function getContactMessage(id: string): Promise<ContactMessage | null> {

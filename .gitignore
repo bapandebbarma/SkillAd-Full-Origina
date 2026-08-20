@@ -39,3 +39,6 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+
+# Google Play service account credentials
+google-service-account.json

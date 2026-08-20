@@ -14,6 +14,9 @@ import Rankings from "./pages/Rankings";
 import Settings from "./pages/Settings";
 import OtpLogs from "./pages/OtpLogs";
 import Translations from "./pages/Translations";
+import DeletionRequests from "./pages/DeletionRequests";
+import ContactMessages from "./pages/ContactMessages";
+import AppReviews from "./pages/AppReviews";
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -55,11 +58,14 @@ export default function App() {
               <Route path="/" component={Dashboard} />
               <Route path="/providers" component={Providers} />
               <Route path="/users" component={Users} />
+              <Route path="/deletion-requests" component={DeletionRequests} />
               <Route path="/categories" component={Categories} />
               <Route path="/subscriptions" component={Subscriptions} />
               <Route path="/advertisements" component={Advertisements} />
               <Route path="/notifications" component={Notifications} />
               <Route path="/content" component={Content} />
+              <Route path="/app-reviews" component={AppReviews} />
+              <Route path="/contact-messages" component={ContactMessages} />
               <Route path="/rankings" component={Rankings} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/translations" component={Translations} />
