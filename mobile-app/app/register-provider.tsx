@@ -433,7 +433,8 @@ export default function RegisterProviderScreen() {
   }
 
   async function handlePickPhoto() {
-    if (Platform.OS !== "web") {
+    // Android Photo Picker does not need broad READ_MEDIA_* access.
+    if (Platform.OS === "ios") {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(t.permissionNeeded, t.pleaseAllowPhotoLibrary);

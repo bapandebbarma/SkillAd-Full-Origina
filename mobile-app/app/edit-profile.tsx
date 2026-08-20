@@ -102,7 +102,8 @@ export default function EditProfileScreen() {
           Alert.alert(t.permissionNeeded, t.allowCameraTakePhoto);
           return;
         }
-      } else {
+      } else if (Platform.OS === "ios") {
+        // Android Photo Picker does not need broad READ_MEDIA_* access.
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== "granted") {
           Alert.alert(t.permissionNeeded, t.allowPhotoLibrary);
