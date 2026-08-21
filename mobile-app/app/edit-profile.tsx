@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
 import { uploadAsync, FileSystemUploadType } from "expo-file-system/legacy";
+import { useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -29,6 +30,7 @@ export default function EditProfileScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, updateAvatarUrl, supabaseUserId } = useAuth();
 
   const [name, setName] = useState(user?.name ?? "");
@@ -75,6 +77,11 @@ export default function EditProfileScreen() {
         const data = JSON.parse(result.body) as { fileUrl?: string; error?: string };
         if (data.fileUrl) {
           await updateAvatarUrl(data.fileUrl);
+          setPickedImageUri(data.fileUrl);
+          // Same invalidation as profile.tsx successful upload — prevent stale list/profile avatars.
+          queryClient.invalidateQueries({ queryKey: ["conversations"] });
+          queryClient.invalidateQueries({ queryKey: ["providers"] });
+          queryClient.invalidateQueries({ queryKey: ["providerProfile"] });
           console.log("[upload:edit-profile] success →", data.fileUrl);
           return data.fileUrl;
         }
@@ -160,6 +167,12 @@ console.log("[UPLOAD RESULT]", uploaded);
       Alert.alert(t.nameRequired, t.pleaseEnterName);
       return;
     }
+    // Block navigation while photo upload is in flight so Profile focus refresh
+    // cannot overwrite AuthContext with a stale avatar_url.
+    if (uploadingPhoto) {
+      Alert.alert(t.uploadPhoto, t.uploadingPhoto);
+      return;
+    }
     try {
       setSaving(true);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -194,8 +207,8 @@ console.log("[UPLOAD RESULT]", uploaded);
           <Ionicons name="arrow-back" size={24} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t.editProfile}</Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn} activeOpacity={0.8}>
-          {saving
+        <TouchableOpacity onPress={handleSave} disabled={saving || uploadingPhoto} style={styles.saveBtn} activeOpacity={0.8}>
+          {saving || uploadingPhoto
             ? <ActivityIndicator size="small" color={colors.primary} />
             : <Text style={[styles.saveBtnText, { color: colors.primary }]}>{t.save}</Text>
           }
@@ -256,12 +269,12 @@ console.log("[UPLOAD RESULT]", uploaded);
         </View>
 
         <TouchableOpacity
-          style={[styles.saveFullBtn, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}
+          style={[styles.saveFullBtn, { backgroundColor: colors.primary, opacity: saving || uploadingPhoto ? 0.7 : 1 }]}
           onPress={handleSave}
           activeOpacity={0.85}
-          disabled={saving}
+          disabled={saving || uploadingPhoto}
         >
-          {saving
+          {saving || uploadingPhoto
             ? <ActivityIndicator size="small" color="#fff" />
             : <Text style={styles.saveFullBtnText}>{t.saveChanges}</Text>
           }

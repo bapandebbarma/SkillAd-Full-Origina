@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
@@ -430,6 +430,27 @@ export default function ChatScreen() {
   const headerName = (name ?? "").trim() || providerData?.name || t.user;
   const headerAvatarUrl = avatarUrl || profileAvatarUrl || providerData?.avatarUrl || undefined;
   const headerVerified = verified === "true" || (!!providerData?.verified && verified !== "false");
+
+  // Presence for the OTHER participant when they are a provider (providers.available).
+  // usingRealtime remains separate and only drives messaging/channel behavior.
+  const otherIsProvider = providerData != null;
+  const partnerOnline = otherIsProvider && providerData.available !== false;
+
+  // Refresh provider availability when returning to this chat (existing focus pattern).
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      let cancelled = false;
+      fetchProviderById(id)
+        .then((p) => {
+          if (!cancelled && p) setProviderData(p);
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [id]),
+  );
 
   useEffect(() => {
     async function init() {
@@ -1047,16 +1068,38 @@ export default function ChatScreen() {
             <View
               style={[
                 styles.onlineDot,
-                { backgroundColor: usingRealtime ? "#10B981" : colors.mutedForeground },
+                {
+                  backgroundColor: otherIsProvider
+                    ? partnerOnline
+                      ? "#10B981"
+                      : colors.mutedForeground
+                    : !usingRealtime
+                      ? colors.mutedForeground
+                      : "transparent",
+                },
               ]}
             />
             <Text
               style={[
                 styles.onlineText,
-                { color: usingRealtime ? "#10B981" : colors.mutedForeground },
+                {
+                  color: otherIsProvider
+                    ? partnerOnline
+                      ? "#10B981"
+                      : colors.mutedForeground
+                    : colors.mutedForeground,
+                },
               ]}
             >
-              {usingRealtime ? t.connected : isLoggedIn ? t.offlineMode : t.signInToChat}
+              {!isLoggedIn
+                ? t.signInToChat
+                : otherIsProvider
+                  ? partnerOnline
+                    ? t.online
+                    : t.offline
+                  : !usingRealtime
+                    ? t.offlineMode
+                    : ""}
             </Text>
           </View>
         </View>

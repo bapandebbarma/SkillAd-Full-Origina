@@ -517,6 +517,20 @@ export default function RegisterProviderScreen() {
       if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
+
+    // Block registration while a profile photo upload is still in progress.
+    if (uploadingPhoto) {
+      Alert.alert(t.uploadPhoto, t.uploadingPhoto);
+      return;
+    }
+
+    // Never persist a local device URI (file:// / content://) as avatarUrl.
+    // Only allow no photo, or an already-uploaded http(s) server URL.
+    if (pickedImageUri && !/^https?:\/\//i.test(pickedImageUri)) {
+      Alert.alert(t.uploadPhoto, t.uploadingPhoto);
+      return;
+    }
+
     setErrors({});
     setLoading(true);
     if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -887,12 +901,12 @@ export default function RegisterProviderScreen() {
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitBtn, { backgroundColor: loading ? colors.muted : colors.primary }]}
+          style={[styles.submitBtn, { backgroundColor: loading || uploadingPhoto ? colors.muted : colors.primary }]}
           onPress={handleSubmit}
-          disabled={loading}
+          disabled={loading || uploadingPhoto}
           activeOpacity={0.85}
         >
-          {loading ? (
+          {loading || uploadingPhoto ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
             <>
