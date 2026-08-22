@@ -1883,7 +1883,7 @@ router.post("/admin/upload-presign", async (req, res) => {
 // ── Image Upload (admin panel — base64, auto-compressed to WebP) ─────────────
 // Used as fallback when presign endpoint is unavailable.
 router.post("/admin/upload", async (req, res) => {
-  const { data } = req.body as { filename?: string; data?: string; mimeType?: string };
+  const { data, mimeType } = req.body as { filename?: string; data?: string; mimeType?: string };
 
   if (!data) {
     res.status(400).json({ error: "data (base64) is required" });
@@ -1906,13 +1906,9 @@ router.post("/admin/upload", async (req, res) => {
       return;
     }
 
-    // Compress and convert to WebP using sharp
-    const name = `${Date.now()}.webp`;
-    const sharp = (await import("sharp")).default;
-    const webpBuffer = await sharp(buffer)
-      .resize(1200, 800, { fit: "inside", withoutEnlargement: true })
-      .webp({ quality: 85 })
-      .toBuffer();
+    const { processUploadImage } = await import("../lib/imageProcess.js");
+    const processed = await processUploadImage(buffer, mimeType, "adminAd");
+    const name = `${Date.now()}.${processed.extension}`;
 
     // ── Primary: Supabase Storage ─────────────────────────────────────────────
     if (supabase) {
@@ -1920,7 +1916,7 @@ router.post("/admin/upload", async (req, res) => {
         await supabase.storage.createBucket("ads", { public: true }).catch(() => {});
         const { data: upData, error: upErr } = await supabase.storage
           .from("ads")
-          .upload(name, webpBuffer, { contentType: "image/webp", upsert: true });
+          .upload(name, processed.buffer, { contentType: processed.contentType, upsert: true });
         if (upData) {
           const { data: urlData } = supabase.storage.from("ads").getPublicUrl(name);
           res.json({ success: true, url: urlData.publicUrl });
@@ -1937,7 +1933,7 @@ router.post("/admin/upload", async (req, res) => {
     if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
     const destPath = resolve(UPLOADS_DIR, name);
     const { writeFileSync: wfs } = await import("fs");
-    wfs(destPath, webpBuffer);
+    wfs(destPath, processed.buffer);
     const apiBase =
       (process.env["API_BASE_URL"] ?? "").replace(/\/$/, "") ||
       `${req.protocol}://${req.get("host")}`;
@@ -1946,7 +1942,7 @@ router.post("/admin/upload", async (req, res) => {
     const raw = (e?.message ?? "") as string;
     const msg = raw.toLowerCase().includes("unsupported image format")
       ? "Unsupported image format — please upload a JPG, PNG, WebP, or GIF"
-      : raw || "Image processing failed. Please try a different image.";
+      : "Image upload failed. Please try again.";
     res.status(500).json({ error: msg });
   }
 });

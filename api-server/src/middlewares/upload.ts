@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { processUploadImage } from "../lib/imageProcess.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // All source is bundled into dist/index.mjs — __dirname is always dist/ at runtime
@@ -46,31 +47,26 @@ const PRESETS: Record<string, ImagePreset> = {
   documents: { maxWidth: 1600, maxHeight: 2000, quality: 88 },
 };
 
-// ── Core image processor: resize + convert to WebP ───────────────────────────
-// sharp is optional — if not installed the original buffer is saved as-is
+const SUBDIR_VARIANT: Record<string, "profile" | "service" | "banner" | "document"> = {
+  profile: "profile",
+  profiles: "profile",
+  services: "service",
+  banners: "banner",
+  documents: "document",
+};
+
+// ── Core image processor: resize + convert to WebP when sharp is available ───
 export async function processAndSaveImage(
   buffer: Buffer,
-  subdir: keyof typeof PRESETS,
+  subdir: keyof typeof PRESETS | string,
+  contentType = "image/jpeg",
 ): Promise<string> {
-  const preset = PRESETS[subdir] ?? PRESETS.services;
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  const variant = SUBDIR_VARIANT[String(subdir)] ?? "service";
+  const processed = await processUploadImage(buffer, contentType, variant);
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${processed.extension}`;
   const destDir = resolve(DATA_DIR, "uploads", subdir as string);
   const destPath = resolve(destDir, filename);
-
-  try {
-    const sharp = (await import("sharp")).default;
-    await sharp(buffer)
-      .resize(preset.maxWidth, preset.maxHeight, {
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({ quality: preset.quality })
-      .toFile(destPath);
-  } catch {
-    // sharp not available — save original buffer directly
-    writeFileSync(destPath, buffer);
-  }
-
+  writeFileSync(destPath, processed.buffer);
   return `/api/uploads/${subdir}/${filename}`;
 }
 

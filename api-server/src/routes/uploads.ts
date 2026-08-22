@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { multerUpload, processAndSaveImage } from "../middlewares/upload.js";
+import { processUploadImage } from "../lib/imageProcess.js";
 import { supabase } from "../lib/supabase.js";
 import { logger } from "../lib/logger.js";
 
@@ -11,6 +12,7 @@ async function uploadToStorage(
   bucket: string,
   filename: string,
   req: Request,
+  contentType: string,
 ): Promise<string> {
   // Primary: Supabase Storage — permanent, CDN-hosted, works on all hosts
   if (supabase) {
@@ -18,7 +20,7 @@ async function uploadToStorage(
       await supabase.storage.createBucket(bucket, { public: true }).catch(() => {});
       const { data, error: upErr } = await supabase.storage
         .from(bucket)
-        .upload(filename, buffer, { contentType: "image/webp", upsert: true });
+        .upload(filename, buffer, { contentType, upsert: true });
       if (data) {
         const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(filename);
         return urlData.publicUrl;
@@ -29,7 +31,7 @@ async function uploadToStorage(
     }
   }
   // Fallback: local disk
-  const relativePath = await processAndSaveImage(buffer, bucket);
+  const relativePath = await processAndSaveImage(buffer, bucket, contentType);
   const base = (process.env["API_BASE_URL"] ?? "").replace(/\/$/, "") || `${req.protocol}://${req.get("host")}`;
   return `${base}${relativePath}`;
 }
@@ -64,10 +66,9 @@ router.post(
       }
 
       // Step 2: Upload new image
-      const sharp = (await import("sharp")).default;
-      const webp = await sharp(req.file.buffer).resize(400, 400, { fit: "cover" }).webp({ quality: 85 }).toBuffer();
-      const filename = `${Date.now()}.webp`;
-      const url = await uploadToStorage(webp, "profiles", filename, req);
+      const processed = await processUploadImage(req.file.buffer, req.file.mimetype, "profile");
+      const filename = `${Date.now()}.${processed.extension}`;
+      const url = await uploadToStorage(processed.buffer, "profiles", filename, req, processed.contentType);
 
       // Step 3: Update profiles.avatar_url (service-role key — bypasses client JWT expiry)
       if (userId && supabase) {
@@ -111,8 +112,8 @@ router.post(
 
       res.json({ success: true, fileUrl: url });
     } catch (e: any) {
-      logger.error({ err: e?.message }, "[upload/profile] image processing failed");
-      res.status(500).json({ error: e.message ?? "Image processing failed" });
+      logger.error({ err: e?.message }, "[upload/profile] upload failed");
+      res.status(500).json({ error: "Image upload failed. Please try again." });
     }
   },
 );
@@ -125,12 +126,13 @@ router.post(
     if (!req.file) { res.status(400).json({ error: "No image file provided. Use field name 'image'." }); return; }
     if (req.file.size > 5 * 1024 * 1024) { res.status(400).json({ error: "Service image must be under 5 MB." }); return; }
     try {
-      const sharp = (await import("sharp")).default;
-      const webp = await sharp(req.file.buffer).resize(800, 600, { fit: "inside", withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-      const filename = `${Date.now()}.webp`;
-      const url = await uploadToStorage(webp, "services", filename, req);
+      const processed = await processUploadImage(req.file.buffer, req.file.mimetype, "service");
+      const filename = `${Date.now()}.${processed.extension}`;
+      const url = await uploadToStorage(processed.buffer, "services", filename, req, processed.contentType);
       res.json({ success: true, fileUrl: url });
-    } catch (e: any) { res.status(500).json({ error: e.message ?? "Image processing failed" }); }
+    } catch {
+      res.status(500).json({ error: "Image upload failed. Please try again." });
+    }
   },
 );
 
@@ -142,12 +144,13 @@ router.post(
     if (!req.file) { res.status(400).json({ error: "No image file provided. Use field name 'image'." }); return; }
     if (req.file.size > 5 * 1024 * 1024) { res.status(400).json({ error: "Banner image must be under 5 MB." }); return; }
     try {
-      const sharp = (await import("sharp")).default;
-      const webp = await sharp(req.file.buffer).resize(1200, 400, { fit: "inside", withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-      const filename = `${Date.now()}.webp`;
-      const url = await uploadToStorage(webp, "banners", filename, req);
+      const processed = await processUploadImage(req.file.buffer, req.file.mimetype, "banner");
+      const filename = `${Date.now()}.${processed.extension}`;
+      const url = await uploadToStorage(processed.buffer, "banners", filename, req, processed.contentType);
       res.json({ success: true, fileUrl: url });
-    } catch (e: any) { res.status(500).json({ error: e.message ?? "Image processing failed" }); }
+    } catch {
+      res.status(500).json({ error: "Image upload failed. Please try again." });
+    }
   },
 );
 
@@ -159,12 +162,13 @@ router.post(
     if (!req.file) { res.status(400).json({ error: "No image file provided. Use field name 'image'." }); return; }
     if (req.file.size > 8 * 1024 * 1024) { res.status(400).json({ error: "Document image must be under 8 MB." }); return; }
     try {
-      const sharp = (await import("sharp")).default;
-      const webp = await sharp(req.file.buffer).resize(1600, 2000, { fit: "inside", withoutEnlargement: true }).webp({ quality: 85 }).toBuffer();
-      const filename = `${Date.now()}.webp`;
-      const url = await uploadToStorage(webp, "documents", filename, req);
+      const processed = await processUploadImage(req.file.buffer, req.file.mimetype, "document");
+      const filename = `${Date.now()}.${processed.extension}`;
+      const url = await uploadToStorage(processed.buffer, "documents", filename, req, processed.contentType);
       res.json({ success: true, fileUrl: url });
-    } catch (e: any) { res.status(500).json({ error: e.message ?? "Image processing failed" }); }
+    } catch {
+      res.status(500).json({ error: "Image upload failed. Please try again." });
+    }
   },
 );
 
